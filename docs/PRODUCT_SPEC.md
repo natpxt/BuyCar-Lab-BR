@@ -116,6 +116,8 @@ A exclusão do veículo atual exige confirmação e invalida comparações exist
 
 Os valores atuais do Tiida não serão usados como padrões de formulário.
 
+No MVP, a depreciação anual será calculada pela regra simples `valor do veículo × taxa anual de depreciação`. Curvas de depreciação e valor residual por horizonte permanecem pós-MVP. Essa regra define um componente do TCO econômico e não resolve a composição patrimonial da compra ou da revenda.
+
 ### 5.3 Campos por motorização
 
 #### ICE
@@ -140,7 +142,7 @@ Usa os mesmos campos de combustível do ICE, com a eficiência própria do híbr
 - consumo e preço do combustível líquido;
 - divisão da quilometragem anual entre modo elétrico e combustão.
 
-As parcelas elétrica e a combustão devem somar 100% da quilometragem. O MVP usará divisão por quilometragem; modelos por dias, viagens ou energia medida ficam para evolução posterior. O custo de cada fonte será calculado separadamente para impedir dupla contagem.
+Os percentuais de uso elétrico e a combustão devem somar 100% da quilometragem anual. Modelos por dias, viagens ou energia medida ficam para o pós-MVP. O custo de cada fonte será calculado separadamente para impedir dupla contagem.
 
 ### 5.4 Estados
 
@@ -166,7 +168,7 @@ Deve apresentar lado a lado:
 - diferença absoluta e percentual;
 - economia ou custo adicional do candidato.
 
-O cálculo por quilômetro usa a quilometragem anual declarada. Se ela estiver ausente ou for inválida, o resultado por km não será exibido e haverá uma mensagem específica.
+O MVP usa uma visão anual normalizada do TCO. Os valores mensais derivam do total anual dividido por 12, e os valores por quilômetro usam o total anual dividido pela quilometragem anual declarada. Se a quilometragem estiver ausente ou for inválida, o resultado por km não será exibido e haverá uma mensagem específica. Análises por horizonte de posse permanecem pós-MVP.
 
 ### 6.2 Leitura dos resultados
 
@@ -215,12 +217,18 @@ A prestação PRICE será calculada pelo motor financeiro conforme `FINANCIAL_MO
 
 ### 7.4 Taxa, prazo e correção
 
-A taxa de juros contém:
+A interface deve nomear o campo como **taxa efetiva mensal** ou **taxa efetiva anual**, conforme a periodicidade selecionada. A taxa contém:
 
-- `value`: percentual informado;
+- `value`: percentual informado pelo usuário;
 - `periodicity`: `monthly` ou `annual`.
 
-O motor financeiro será responsável por normalizar a taxa para a periodicidade mensal usada pelo cronograma. A convenção de conversão anual para mensal deve ser definida primeiro no modelo financeiro; esta especificação não cria a fórmula.
+Internamente, o percentual é convertido para forma decimal. Uma taxa `monthly` é usada diretamente. Uma taxa `annual` é convertida para a taxa mensal efetiva equivalente por:
+
+```text
+monthlyRate = (1 + annualRate)^(1/12) - 1
+```
+
+A taxa mensal convertida não sofre arredondamento intermediário antes de alimentar o cronograma PRICE. Taxas nominais anuais e CET permanecem fora desta convenção e exigem tratamento próprio no modelo financeiro.
 
 Outras entradas contratuais:
 
@@ -280,7 +288,11 @@ O campo conceitual `extraPaymentStrategy` é separado de `amortizationSystem`:
 | `reduceTerm` | Amortiza o saldo, mantém a prestação de referência e reduz o prazo efetivo. |
 | `prepayTailInstallments` | Liquida parcelas finais específicas pelo valor presente segundo regras da financeira. |
 
-`reduceTerm` não representa antecipação explícita de parcelas finais. `prepayTailInstallments` permanecerá visível como indisponível enquanto não existirem parcelas elegíveis, data de liquidação, taxa de desconto, encargos preservados ou dispensados e arredondamento contratual aprovados.
+`reduceTerm` não representa antecipação explícita de parcelas finais. `prepayTailInstallments` permanecerá pós-MVP e visível como indisponível enquanto não existirem parcelas elegíveis, data de liquidação, taxa de desconto, encargos preservados ou dispensados e arredondamento contratual aprovados.
+
+Como requisito funcional futuro do produto, valores destinados a `prepayTailInstallments` poderão acumular em uma reserva separada. Uma parcela final elegível somente será liquidada quando a reserva cobrir integralmente seu valor de liquidação na data. O saldo não utilizado continuará disponível para períodos seguintes. Somente o valor efetivamente usado na liquidação reduzirá a dívida; antes disso, a reserva não será amortização de principal nem custo econômico. O tratamento de eventual reserva remanescente na quitação continuará como decisão futura explícita.
+
+Esse comportamento de reserva é um requisito aprovado do produto. Ele não foi observado na planilha nem no simulador do Investidor Sardinha.
 
 ## 9. Comparação de estratégias
 
@@ -306,6 +318,12 @@ Para o baseline, economia de juros e meses antecipados são zero. A troca entre 
 ## 10. Cronograma e composição financeira
 
 O cronograma mensal segue a ordem definida em `FINANCIAL_MODEL.md` e deve continuar até a quitação. Nenhum limite interno pode truncar silenciosamente os resultados.
+
+O motor não realiza arredondamento intencional em taxa, correção, juros, principal, prestação ou saldo entre períodos e preserva a precisão nativa do tipo numérico adotado. Cada período usa o saldo interno final do período anterior. Totais são calculados a partir dos valores internos, não pela soma dos valores visualmente arredondados.
+
+Valores monetários são exibidos com duas casas decimais usando `half-up`. Essa é uma convenção do aplicativo e não um comportamento comprovado da planilha. A interface deve informar, quando necessário, que a soma manual das linhas exibidas pode diferir alguns centavos de um total calculado com valores internos.
+
+A última amortização é limitada ao principal remanescente e deve encerrar o saldo em zero, sem produzir saldo negativo.
 
 Cada período apresentará, quando aplicável:
 
@@ -337,7 +355,7 @@ A composição financeira acumulada será mostrada separadamente como:
 
 O principal total amortizado inclui tanto o principal contido nas prestações quanto os aportes extraordinários. Os aportes podem aparecer como detalhamento do principal e do fluxo, mas não serão somados novamente como categoria econômica independente.
 
-O total pago e sua composição devem fechar matematicamente, considerando a forma como a correção afeta o saldo e os pagamentos. A classificação econômica da correção permanece uma decisão aberta e não pode ser inferida pela interface.
+O total pago e sua composição devem fechar matematicamente com base nos valores internos, considerando a forma como a correção afeta o saldo e os pagamentos. A exibição aplica duas casas em `half-up` somente depois dos cálculos. A classificação econômica da correção permanece uma decisão aberta e não pode ser inferida pela interface.
 
 ### 10.2 Visualização
 
@@ -379,7 +397,6 @@ Exportação, importação e sincronização ficam fora do MVP.
 - **Sem aportes:** permitir calcular `none` e explicar como adicionar uma agenda.
 - **Aporte posterior à quitação:** informar que a ocorrência não foi aplicada.
 - **Aporte superior ao saldo elegível:** mostrar o valor efetivamente aplicável e exigir tratamento explícito do excedente.
-- **Taxa anual sem convenção financeira aprovada:** identificar a dependência do motor financeiro, sem aplicar conversão presumida.
 - **`prepayTailInstallments` indisponível:** informar quais dados contratuais ainda faltam.
 - **Erro de cálculo:** preservar entradas e evitar resultados parciais apresentados como válidos.
 
@@ -402,10 +419,10 @@ Exportação, importação e sincronização ficam fora do MVP.
 - um veículo atual e múltiplos candidatos;
 - ICE, HEV, PHEV e BEV;
 - comparação do atual com um candidato;
-- TCO de caixa e econômico mensal, anual e por km;
+- TCO de caixa e econômico em visão anual normalizada, apresentados por mês, por ano e por km;
 - economia ou custo adicional da troca;
 - financiamento PRICE;
-- taxa mensal ou anual, sujeita à convenção aprovada do motor;
+- taxa efetiva mensal ou anual, com conversão anual equivalente definida pelo modelo financeiro;
 - custos incorporados ao principal e cobranças periódicas separadas;
 - aportes únicos, recorrentes e substituições manuais por período;
 - `none`, `reducePayment` e `reduceTerm`;
@@ -421,9 +438,10 @@ Exportação, importação e sincronização ficam fora do MVP.
 - importação e exportação de dados;
 - histórico detalhado de abastecimentos e serviços;
 - TCO por período de posse;
+- divisão de uso do PHEV por dias, viagens ou energia medida;
 - curvas de depreciação e valor residual informado;
 - inflação e valor do dinheiro no tempo;
-- `prepayTailInstallments`, após definição contratual completa.
+- `prepayTailInstallments`, incluindo sua reserva, após definição contratual completa e decisão sobre eventual saldo remanescente na quitação.
 
 ### 14.3 Fora de escopo
 
@@ -435,41 +453,53 @@ Exportação, importação e sincronização ficam fora do MVP.
 - recomendação de crédito, investimento ou decisão financeira;
 - reprodução visual do simulador de referência.
 
-## 15. Decisões financeiras abertas
+## 15. Decisões financeiras
 
-As seguintes decisões bloqueiam partes específicas da implementação e devem ser resolvidas em `FINANCIAL_MODEL.md` antes do respectivo cálculo:
+### 15.1 Decisões definidas para o MVP
 
-1. convenção de conversão entre taxa anual e mensal;
-2. classificação econômica da correção monetária;
-3. representação de CET e de encargos contratuais;
-4. arredondamento interno ou contratual por prestação;
-5. tratamento de valor residual e horizonte de posse;
-6. regras de valor presente para `prepayTailInstallments`;
-7. composição patrimonial completa da compra e revenda.
+1. `monthly` e `annual` representam taxas efetivas. A mensal é usada diretamente; a anual é convertida por equivalência composta sem arredondamento intermediário.
+2. O cronograma preserva a precisão nativa entre períodos, calcula totais com valores internos, exibe moeda com duas casas em `half-up` e limita a última amortização ao principal remanescente.
+3. O TCO usa visão anual normalizada, apresentada por mês, por ano e por km; horizonte de posse permanece pós-MVP.
+4. O PHEV divide percentualmente a quilometragem anual entre modo elétrico e combustão, totalizando 100%; outros critérios permanecem pós-MVP.
+5. A depreciação usa `valor do veículo × taxa anual de depreciação`; curvas e valor residual por horizonte permanecem pós-MVP.
 
-Até essas definições serem aprovadas, a interface deve sinalizar a limitação e não criar resultados por aproximação silenciosa.
+### 15.2 Decisões ainda abertas
+
+As decisões abaixo continuam bloqueando somente as funcionalidades que dependem delas:
+
+1. classificação econômica da correção monetária;
+2. representação de CET, taxas nominais anuais e encargos contratuais;
+3. composição patrimonial da compra e da revenda, incluindo o tratamento do valor residual; a depreciação simples do MVP não resolve essa questão;
+4. regras contratuais de `prepayTailInstallments`, incluindo valor presente, elegibilidade, descontos, tarifas, arredondamento e tratamento de eventual reserva remanescente na quitação.
+
+Até essas definições serem aprovadas, a interface deve sinalizar a limitação correspondente e não criar resultados por aproximação silenciosa.
 
 ## 16. Critérios de aceite do MVP
 
 1. O usuário cadastra e edita o veículo atual e candidatos das quatro motorizações.
-2. O PHEV distribui a quilometragem sem dupla contagem entre eletricidade e combustível.
-3. A comparação apresenta TCO de caixa e econômico separadamente, nas três periodicidades solicitadas.
-4. Economia e custo adicional usam direção e rótulos inequívocos.
-5. A seleção do candidato alimenta o financiamento sem alterar o TCO operacional.
-6. O valor financiado calculado tem precedência; o manual funciona somente como fallback quando o preço não estiver preenchido.
-7. O sistema contratual é PRICE e aparece separado da estratégia extraordinária.
-8. A taxa exige valor e periodicidade, e sua conversão ocorre somente no motor financeiro segundo regra aprovada.
-9. A prestação inicial é calculada e não pode ser digitada como entrada padrão.
-10. Custos financiados aumentam o principal; seguros e taxas periódicos apenas aumentam o desembolso dos períodos correspondentes.
-11. Um aporte único pode ser agendado em qualquer período válido.
-12. Um aporte recorrente respeita início, fim opcional e frequência.
-13. `reducePayment` mantém o prazo e reduz a prestação; `reduceTerm` mantém a prestação de referência e reduz o prazo.
-14. `prepayTailInstallments` permanece separado e indisponível sem dados contratuais suficientes.
-15. A comparação mostra `none` contra uma estratégia com a mesma base contratual.
-16. Os resultados incluem valor financiado, prestação inicial, juros, fluxo total, prazos, economia, meses antecipados e saldo mensal.
-17. O fluxo total soma prestações, aportes e cobranças periódicas sem contar aportes duas vezes na composição.
-18. Principal, juros, correção e encargos aparecem discriminados.
-19. O cronograma alcança a quitação ou informa explicitamente por que ela não pôde ser calculada.
-20. Os dados permanecem após recarregar o aplicativo e podem ser apagados por ação confirmada.
-21. Os cálculos PRICE aplicáveis reconciliam os golden cases de `FINANCIAL_MODEL.md` com as tolerâncias documentadas.
-22. Nenhuma tela classifica principal amortizado como custo econômico.
+2. O PHEV divide a quilometragem anual por percentuais entre eletricidade e combustão, totalizando 100% e sem dupla contagem.
+3. A comparação usa TCO anual normalizado e apresenta TCO de caixa e econômico separadamente por mês, por ano e por km.
+4. A depreciação anual do MVP é calculada como `valor do veículo × taxa anual de depreciação`.
+5. Economia e custo adicional usam direção e rótulos inequívocos.
+6. A seleção do candidato alimenta o financiamento sem alterar o TCO operacional.
+7. O valor financiado calculado tem precedência; o manual funciona somente como fallback quando o preço não estiver preenchido.
+8. O sistema contratual é PRICE e aparece separado da estratégia extraordinária.
+9. A interface identifica a taxa como efetiva mensal ou anual; a mensal é usada diretamente e a anual é convertida por `monthlyRate = (1 + annualRate)^(1/12) - 1` sem arredondamento intermediário.
+10. `1,7% a.m.` e aproximadamente `22,4197350053% a.a.` efetivos produzem a mesma taxa mensal interna e preservam os golden cases PRICE correspondentes.
+11. O motor não arredonda intencionalmente taxa, correção, juros, principal, prestação ou saldo entre períodos; usa o saldo interno anterior e calcula totais com valores internos.
+12. Valores monetários são exibidos com duas casas em `half-up`, como convenção do aplicativo.
+13. A última amortização é limitada ao principal remanescente e encerra o saldo em zero sem saldo negativo.
+14. A prestação inicial é calculada e não pode ser digitada como entrada padrão.
+15. Custos financiados aumentam o principal; seguros e taxas periódicos apenas aumentam o desembolso dos períodos correspondentes.
+16. Um aporte único pode ser agendado em qualquer período válido.
+17. Um aporte recorrente respeita início, fim opcional e frequência.
+18. `reducePayment` mantém o prazo e reduz a prestação; `reduceTerm` mantém a prestação de referência e reduz o prazo.
+19. `prepayTailInstallments` permanece separado e indisponível no MVP sem dados contratuais suficientes.
+20. A comparação mostra `none` contra uma estratégia com a mesma base contratual.
+21. Os resultados incluem valor financiado, prestação inicial, juros, fluxo total, prazos, economia, meses antecipados e saldo mensal.
+22. O fluxo total soma prestações, aportes e cobranças periódicas sem contar aportes duas vezes na composição.
+23. Principal, juros, correção e encargos aparecem discriminados.
+24. O cronograma alcança a quitação ou informa explicitamente por que ela não pôde ser calculada.
+25. Os dados permanecem após recarregar o aplicativo e podem ser apagados por ação confirmada.
+26. Os cálculos PRICE aplicáveis reconciliam os golden cases de `FINANCIAL_MODEL.md` com as tolerâncias documentadas.
+27. Nenhuma tela classifica principal amortizado como custo econômico.

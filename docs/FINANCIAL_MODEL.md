@@ -156,6 +156,10 @@ preço - valor líquido da troca - entrada adicional + custos financiados
 
 `B13` usa esse cálculo quando disponível e recorre ao valor manual de `B12` quando o preço não foi preenchido.
 
+A referência recebe uma taxa mensal em `Comparador_EV!F5`, transfere esse valor para `Financiamento_EV!C6` e o aplica diretamente como taxa do período. Ela não oferece entrada anual nem converte periodicidades.
+
+As fórmulas do cronograma não realizam arredondamento intencional entre períodos. Os valores internos preservam a precisão do Excel, enquanto o formato das células exibe valores monetários com duas casas. O uso de `half-up` definido para o aplicativo na seção 4.6 é uma convenção nova do produto, não um comportamento comprovado da planilha.
+
 Em `Financiamento_EV`, cada mês segue esta ordem:
 
 1. Carrega o saldo final anterior.
@@ -204,11 +208,21 @@ Cada cenário deve declarar:
 - Financiamento, quando aplicável.
 - Moeda, periodicidade, data-base e regras de arredondamento.
 
+Para o MVP, o horizonte do TCO é anual normalizado. Os resultados serão apresentados em valores anuais, mensais e por quilômetro: o valor mensal deriva do anual dividido por 12, e o valor por quilômetro deriva do anual dividido pela quilometragem anual. Análises por horizonte de posse permanecem pós-MVP.
+
+A depreciação do MVP segue a regra anual simples já documentada:
+
+```text
+depreciação anual = valor do veículo × taxa anual de depreciação
+```
+
+Curvas de depreciação e valor residual por horizonte permanecem pós-MVP. Essa escolha define o custo econômico anual do MVP, mas não resolve a composição patrimonial da compra, da revenda ou do valor residual.
+
 ### 4.2 Energia por motorização
 
 - **ICE:** consumo de combustível líquido em km/L ou L/100 km.
 - **HEV:** mesma estrutura de combustível líquido, com eficiência própria do híbrido.
-- **PHEV:** parcelas separadas da quilometragem em modo elétrico e em combustão. A soma das parcelas deve ser igual à quilometragem total.
+- **PHEV:** percentuais da quilometragem anual em modo elétrico e em combustão, totalizando 100%. Divisões por dias, viagens ou energia medida permanecem pós-MVP.
 - **BEV:** consumo em kWh/100 km, tarifa efetiva e perdas de recarga.
 
 O modelo deve aceitar múltiplas fontes de energia sem duplicar a lógica de TCO. Cada fonte produz um custo anual; o TCO soma os custos das fontes ativas.
@@ -232,7 +246,11 @@ As estratégias são mutuamente distinguíveis:
 - `reduceTerm`: amortiza principal, mantém a prestação de referência e reduz o prazo.
 - `prepayTailInstallments`: quita parcelas finais específicas pelo valor presente, somente quando a financeira oferecer essa operação.
 
-`prepayTailInstallments` exige parâmetros contratuais próprios: parcelas elegíveis, data de liquidação, taxa de desconto, encargos preservados ou dispensados e arredondamento da financeira. Não deve ser calculado como mero sinônimo de `reduceTerm`.
+`prepayTailInstallments` exige parâmetros contratuais próprios: parcelas elegíveis, data de liquidação, taxa de desconto, encargos preservados ou dispensados e arredondamento da financeira. Não deve ser calculado como mero sinônimo de `reduceTerm` e permanece pós-MVP, indisponível até essas regras serem suficientes.
+
+Como requisito funcional futuro do produto, valores destinados a `prepayTailInstallments` podem acumular em uma reserva separada. Uma parcela final elegível somente é liquidada quando a reserva cobre integralmente seu valor de liquidação na data. O saldo não utilizado permanece disponível para períodos seguintes, e somente o valor efetivamente usado na liquidação reduz a dívida. Enquanto não utilizada, a reserva não é amortização de principal nem custo econômico. O tratamento de eventual reserva remanescente na quitação permanece uma decisão futura explícita.
+
+A regra de reserva é um requisito aprovado do produto. Ela não representa comportamento observado na planilha nem no simulador do Investidor Sardinha.
 
 ### 4.5 Agenda de aportes
 
@@ -244,9 +262,26 @@ A agenda deve ser independente da estratégia de amortização:
 
 Todo aporte deve ser limitado ao principal elegível. Excedentes devem ser rejeitados ou devolvidos explicitamente, nunca absorvidos como custo.
 
+### 4.6 Taxas efetivas, precisão e arredondamento
+
+`monthly` e `annual` representam taxas efetivas da respectiva periodicidade. Internamente, as taxas são expressas em forma decimal.
+
+- Uma taxa `monthly` é usada diretamente como taxa do período.
+- Uma taxa `annual` é convertida para a taxa mensal equivalente por:
+
+```text
+monthlyRate = (1 + annualRate)^(1/12) - 1
+```
+
+A taxa mensal convertida não sofre arredondamento intermediário. Taxas nominais anuais e CET não usam esta convenção e exigem tratamento próprio antes de integrarem o motor.
+
+O motor não realiza arredondamento intencional em taxa, correção, juros, principal, prestação ou saldo entre períodos. Cada período usa o saldo interno final do período anterior, preservando a precisão nativa do tipo numérico adotado. Totais são calculados a partir dos valores internos, não pela soma dos valores visualmente arredondados.
+
+Valores monetários são exibidos com duas casas decimais usando arredondamento `half-up`. Esta é uma convenção do aplicativo e não uma regra comprovada da planilha. A última amortização é limitada ao principal remanescente; o saldo final deve chegar exatamente a zero, sem se tornar negativo.
+
 ## 5. Catálogo de regras
 
-As 40 regras abaixo separam o comportamento observado das generalizações propostas.
+As 44 regras abaixo separam o comportamento observado das generalizações propostas.
 
 | ID | Escopo | Classe | Origem | Regra, dependências e saída |
 | --- | --- | --- | --- | --- |
@@ -265,12 +300,12 @@ As 40 regras abaixo separam o comportamento observado das generalizações propo
 | C-13 | Atual | Formulada | `Comparador_EV!J8:J16` | TCO de caixa anual do candidato soma energia, seguro, IPVA, licenciamento e manutenção; mensal = anual ÷ 12. |
 | C-14 | Atual | Formulada | `Comparador_EV!J13:J17` | Depreciação anual = preço × taxa; TCO econômico mensal = (TCO de caixa anual + depreciação) ÷ 12. |
 | C-15 | Atual | Formulada | `Comparador_EV!C17`; `B33:D36` | Economia operacional = TCO de caixa mensal do Tiida − TCO de caixa mensal do candidato. Comparações econômicas permanecem separadas. |
-| C-16 | Atual | Formulada | `Financiamento_EV!C5:C7,F5` | Prestação inicial usa fórmula de anuidade; com taxa zero, divide principal pelo prazo. |
+| C-16 | Atual | Formulada | `Financiamento_EV!C5:C7,F5` | Prestação inicial usa fórmula de anuidade com a taxa mensal aplicada diretamente; com taxa zero, divide principal pelo prazo. |
 | C-17 | Atual | Formulada | `Financiamento_EV!C9,D17:F136` | Aplica correção ao saldo inicial e depois juros mensais sobre o saldo corrigido. |
 | C-18 | Atual | Formulada | `Financiamento_EV!G17:H136` | Recalcula prestação para saldo e prazo restantes; principal programado = prestação − juros, limitado ao saldo. |
 | C-19 | Atual | Formulada | `Financiamento_EV!C10:C11,I17:J136` | Aporte manual numérico substitui o recorrente no mês; vazio usa o aporte padrão após o mês inicial; negativo vira zero. |
 | C-20 | Atual | Formulada | `Financiamento_EV!C12,K17:M136` | Se ativado, reinvestimento = diferença positiva entre prestação inicial e recalculada, respeitando o saldo disponível. |
-| C-21 | Atual | Formulada | `Financiamento_EV!L17:O136` | Aportes são limitados ao principal; pagamento total soma prestação e aportes; saldo final não pode ser negativo. |
+| C-21 | Atual | Formulada | `Financiamento_EV!L17:O136` | Aportes e a última amortização são limitados ao principal remanescente; pagamento total soma prestação e aportes; saldo final não pode ser negativo. |
 | C-22 | Atual | Formulada | `Financiamento_EV!F6:F7` | Prazo efetivo e quitação usam o primeiro mês em que o saldo final chega a zero. |
 | C-23 | Atual | Formulada | `Financiamento_EV!F8:F12,H7:H12` | Resume juros, aportes, reinvestimento, total pago, economia de juros e redução de prestação. |
 | C-24 | Atual | Formulada | `Cenarios_Fin!A4:AG154` | Calcula baseline, normal e potencializada em cronogramas paralelos; horizonte máximo de 120 meses. |
@@ -278,24 +313,28 @@ As 40 regras abaixo separam o comportamento observado das generalizações propo
 | C-26 | Atual | Formulada | `Fluxo_EV!D4` | Média até a quitação = soma da parcela líquida nos meses com pagamento financeiro ÷ quantidade desses meses. |
 | C-27 | Atual | Formulada | `Fluxo_EV!F4` | Após a quitação = TCO de caixa mensal do candidato − TCO de caixa mensal do Tiida. |
 | C-28 | Atual | Formulada | `Fluxo_EV!H4,P11:P130` | Acumulado até a quitação soma a parcela líquida enquanto há pagamento; a coluna P mantém o acumulado mensal completo. |
-| G-01 | Geral | Inferida | Proposta de domínio | TCO de caixa soma custos operacionais efetivamente pagos, com horizonte e periodicidade explícitos. |
+| G-01 | Geral | Inferida | Requisito aprovado | No MVP, o TCO usa horizonte anual normalizado e apresenta resultados anuais, mensais e por quilômetro; horizonte de posse permanece pós-MVP. |
 | G-02 | Geral | Inferida | Proposta de domínio | TCO econômico soma TCO de caixa, depreciação e encargos econômicos definidos, sem principal amortizado. |
 | G-03 | Geral | Inferida | Proposta de domínio | Fluxo do financiamento detalha caixa, principal, juros, correção, tarifas e aportes sem misturá-los ao TCO. |
 | G-04 | Geral | Inferida | Proposta de domínio | ICE e HEV calculam custo por fonte líquida a partir de distância, eficiência e preço. |
 | G-05 | Geral | Inferida | Proposta de domínio | BEV calcula eletricidade a partir de distância, consumo, tarifa e perdas. |
-| G-06 | Geral | Inferida | Proposta de domínio | PHEV combina combustível e eletricidade por parcelas de uso cuja soma deve corresponder à distância total. |
+| G-06 | Geral | Inferida | Requisito aprovado | No MVP, PHEV divide a quilometragem anual por percentuais entre modo elétrico e combustão, totalizando 100% e sem dupla contagem. |
 | G-07 | Geral | Inferida | Requisito aprovado | Principal reduz caixa e passivo no mesmo valor; isoladamente, não altera patrimônio líquido nem custo econômico. |
 | G-08 | Geral | Inferida | Proposta de domínio | `none` preserva o cronograma sem amortização extraordinária. |
 | G-09 | Geral | Inferida | Proposta de domínio | `reducePayment` amortiza principal, reduz a prestação e mantém o prazo. |
 | G-10 | Geral | Inferida | Proposta de domínio | `reduceTerm` amortiza principal, mantém a prestação de referência e reduz o prazo. |
-| G-11 | Geral | Inferida | Proposta de domínio | `prepayTailInstallments` liquida parcelas finais elegíveis pelo valor presente segundo regras da financeira. |
+| G-11 | Geral | Inferida | Requisito aprovado | `prepayTailInstallments` permanece pós-MVP e liquida parcelas finais elegíveis somente segundo regras contratuais suficientes. |
 | G-12 | Geral | Inferida | Proposta de domínio | Aportes únicos, recorrentes e manuais formam uma agenda independente da estratégia de amortização. |
+| G-13 | Geral | Inferida | Requisito aprovado | `monthly` e `annual` são taxas efetivas. A mensal é usada diretamente; a anual é convertida por `monthlyRate = (1 + annualRate)^(1/12) - 1`, sem arredondamento intermediário. |
+| G-14 | Geral | Inferida | Requisito aprovado | O cronograma preserva a precisão nativa entre períodos, calcula totais com valores internos, exibe moeda com duas casas em `half-up` e limita a última amortização ao principal remanescente. |
+| G-15 | Geral | Inferida | Requisito aprovado | No MVP, depreciação anual = valor do veículo × taxa anual de depreciação; curvas e valor residual por horizonte permanecem pós-MVP. |
+| G-16 | Geral | Inferida | Requisito aprovado | A futura reserva de `prepayTailInstallments` acumula valores sem reduzir a dívida ou gerar custo econômico; somente uma liquidação integral elegível usa a reserva e amortiza principal. |
 
-Contagem: 24 regras formuladas, 1 estática e 15 inferidas; 40 regras no total.
+Contagem: 24 regras formuladas, 1 estática e 19 inferidas; 44 regras no total.
 
 ## 6. Golden cases de reconciliação
 
-Os casos abaixo reproduzem a referência. A tolerância monetária é R$ 0,01. Taxas, meses e datas devem corresponder exatamente após a mesma convenção de arredondamento.
+Os casos abaixo reproduzem a referência. A tolerância monetária é R$ 0,01. O motor preserva os valores internos sem arredondamento intencional entre períodos; os resultados monetários esperados são comparados após exibição com duas casas decimais em `half-up`. Essa modalidade de exibição é uma convenção do aplicativo, não uma constatação sobre o modo de arredondamento da planilha. Taxas, meses e datas devem respeitar as convenções declaradas em cada caso.
 
 | Caso | Entradas ou cálculo independente | Esperado | Status |
 | --- | --- | --- | --- |
@@ -328,6 +367,18 @@ Os casos abaixo reproduzem a referência. A tolerância monetária é R$ 0,01. T
 
 Resultado: 25 golden cases reconciliados e 1 não reconciliado integralmente.
 
+### Caso de teste de equivalência de taxa efetiva
+
+Este caso valida a nova entrada anual do aplicativo e não altera a contagem dos golden cases extraídos da planilha:
+
+```text
+1,7% a.m. efetivos
+⇔ (1 + 0,017)^12 - 1
+≈ 22,4197350053% a.a. efetivos
+```
+
+As duas entradas devem produzir, dentro da precisão nativa do motor, a mesma taxa mensal de `0,017` sem arredondamento intermediário e preservar os golden cases PRICE correspondentes: prestação inicial de R$ 2.451,51, juros totais de R$ 37.672,53 e total pago de R$ 117.672,53.
+
 ## 7. Limitações da referência
 
 Estas limitações descrevem a planilha e não são comportamentos desejados para o aplicativo.
@@ -337,7 +388,7 @@ Estas limitações descrevem a planilha e não são comportamentos desejados par
 3. `Dashboard!F14:I14` está mesclado sobre os cálculos armazenados em `G14:H14`. As fórmulas existem no arquivo, mas ficam ocultas pela mesclagem e podem ser frágeis em recálculos ou edições.
 4. O cenário stress de manutenção vale R$ 15.295,73/ano, mas sua fórmula não está presente. O valor implica uma anualização aproximada diferente do intervalo observável completo da posse recente.
 5. `Historico_Mensal` exibe outubro de 2025 a setembro de 2026, enquanto o `Dashboard` declara uma janela móvel exata. A reconciliação depende das tabelas brutas, não apenas do total mensal exibido.
-6. O financiamento usa taxa nominal mensal e correção, mas não possui entrada explícita de CET, tarifas, IOF ou seguros financeiros.
+6. O financiamento usa uma taxa mensal aplicada diretamente e correção, mas não possui entrada anual nem entrada explícita de CET, tarifas, IOF ou seguros financeiros.
 7. A correção monetária aumenta o saldo e afeta pagamentos futuros, mas não integra explicitamente o total de juros usado na leitura econômica.
 8. O cronograma é limitado a 120 meses. Um prazo maior pode gerar resumos incoerentes ou incompletos.
 9. A estratégia potencializada aproxima redução de prazo por reinvestimento, sem representar regras contratuais de uma financeira.
@@ -358,16 +409,20 @@ Estas limitações descrevem a planilha e não são comportamentos desejados par
 - Se a estratégia potencializada representa uma regra real da financeira ou apenas uma simulação matemática.
 - Fonte e periodicidade futura para FIPE, tributos, tarifas e preços de energia.
 
-### Decisões necessárias antes da implementação financeira
+### Decisões definidas para o MVP
 
-1. **Horizonte do TCO:** anual móvel, período de posse ou ambos.
-2. **Aquisição e revenda:** como mostrar entrada, troca, principal e valor residual sem misturar caixa com custo econômico.
-3. **CET:** quais encargos serão informados diretamente e quais serão derivados do contrato.
-4. **Correção monetária:** classificação econômica, índice, periodicidade e interação com juros.
-5. **PHEV:** divisão por quilômetros, dias, viagens ou energia consumida; o modelo precisa impedir dupla contagem.
-6. **Depreciação:** taxa anual simples, curva por período ou valor residual informado.
-7. **`prepayTailInstallments`:** fórmula de valor presente, datas elegíveis, descontos e tarifas dependem da financeira e não podem ser presumidos.
-8. **Arredondamento:** cálculo com precisão integral e arredondamento apenas na apresentação, ou arredondamento contratual por parcela.
+1. **Periodicidade da taxa:** `monthly` e `annual` são efetivas. A taxa mensal é usada diretamente e a anual é convertida pela equivalência composta definida na seção 4.6, sem arredondamento intermediário.
+2. **Precisão e arredondamento:** o cronograma preserva a precisão nativa entre períodos, calcula totais com valores internos e usa duas casas em `half-up` apenas para exibição monetária. A última amortização encerra o principal sem saldo negativo.
+3. **Horizonte do TCO:** visão anual normalizada, apresentada por ano, por mês e por quilômetro. Horizonte de posse permanece pós-MVP.
+4. **PHEV:** divisão percentual da quilometragem anual entre modo elétrico e combustão, totalizando 100%. Outros critérios de divisão permanecem pós-MVP.
+5. **Depreciação:** regra anual simples `valor do veículo × taxa anual de depreciação`. Curvas e valor residual por horizonte permanecem pós-MVP.
+
+### Decisões financeiras ainda abertas
+
+1. **Aquisição, revenda e patrimônio:** como mostrar entrada, troca, principal, revenda e valor residual sem misturar caixa com custo econômico. A depreciação simples do MVP não resolve essa composição patrimonial.
+2. **CET e taxas nominais anuais:** quais encargos serão informados diretamente, quais serão derivados do contrato e como convenções diferentes de taxa efetiva serão representadas.
+3. **Correção monetária:** classificação econômica, índice, periodicidade e interação com juros.
+4. **`prepayTailInstallments`:** fórmula de valor presente, parcelas e datas elegíveis, descontos, tarifas, arredondamento contratual e tratamento de eventual reserva remanescente na quitação.
 
 ## 9. Critérios futuros de teste
 
@@ -378,6 +433,14 @@ Estas limitações descrevem a planilha e não são comportamentos desejados par
 - Verificar que amortização de principal altera caixa e passivo, mas não o custo econômico isoladamente.
 - Confirmar que aportes únicos, recorrentes e manuais afetam somente os períodos previstos.
 - Testar ICE, HEV, PHEV e BEV com as mesmas interfaces de TCO e fontes de energia distintas.
-- Reconciliar somas anuais e mensais com tolerância de R$ 0,01, preservando precisão interna.
+- Confirmar que o TCO anual normalizado reconcilia suas apresentações mensal e por quilômetro e que análises por horizonte de posse não são calculadas no MVP.
+- Verificar que os percentuais elétrico e a combustão do PHEV totalizam 100% da quilometragem anual, sem dupla contagem.
+- Reconciliar a depreciação anual simples como `valor do veículo × taxa anual de depreciação`, sem inferir curva ou valor residual.
+- Para a futura `prepayTailInstallments`, testar que a reserva não reduz a dívida antes do uso, só liquida parcela integralmente coberta e carrega o saldo não utilizado para períodos seguintes.
+- Reconciliar somas anuais e mensais com tolerância de R$ 0,01, preservando a precisão nativa entre períodos.
+- Confirmar que `1,7% a.m.` e aproximadamente `22,4197350053% a.a.` efetivos geram a mesma taxa mensal interna e preservam os golden cases PRICE correspondentes.
+- Testar que a taxa anual convertida, a correção, os juros, o principal, a prestação e o saldo não sofrem arredondamento intencional intermediário.
+- Calcular totais a partir dos valores internos e testar separadamente a exibição monetária com duas casas em `half-up`.
+- Verificar que cada período usa o saldo interno final anterior e que a última amortização encerra o saldo em zero sem torná-lo negativo.
 - Rejeitar taxas, prazos, consumos, preços ou percentuais inválidos em vez de produzir zeros plausíveis.
 - Exibir TCO de caixa, TCO econômico e fluxo do financiamento como resultados separados em toda a interface.
