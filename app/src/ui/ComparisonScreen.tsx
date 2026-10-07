@@ -8,6 +8,7 @@ import type { TcoResult } from '../domain/tco'
 import {
   formatCostPerKm,
   formatCurrency,
+  formatOperationalHeadline,
   formatPercentageValue,
 } from './format'
 
@@ -45,22 +46,18 @@ function TcoPanel({ label, name, tco, emphasized }: TcoPanelProps) {
 
 function ComparisonSummary({ result }: { readonly result: IntegratedVehicleComparison }) {
   const monthly = result.operationalSavings.monthly
-  const candidateIsCheaper = monthly >= 0
+  const optionIsCheaper = monthly >= 0
   return (
-    <section className={`insight-card ${candidateIsCheaper ? 'insight-positive' : 'insight-negative'}`}>
+    <section className={`insight-card ${optionIsCheaper ? 'insight-positive' : 'insight-negative'}`}>
       <span className="eyebrow">Resultado operacional</span>
-      <h2>
-        {candidateIsCheaper
-          ? `Candidato ${formatCurrency(Math.abs(monthly))} mais barato por mês`
-          : `Candidato ${formatCurrency(Math.abs(monthly))} mais caro por mês`}
-      </h2>
+      <h2>{formatOperationalHeadline(result.candidate.vehicle.name, monthly)}</h2>
       <div className="insight-metrics">
-        <div><span>{candidateIsCheaper ? 'Economia anual' : 'Custo adicional anual'}</span><strong>{formatCurrency(Math.abs(result.operationalSavings.annual))}</strong></div>
-        <div><span>{candidateIsCheaper ? 'Economia mensal' : 'Custo adicional mensal'}</span><strong>{formatCurrency(Math.abs(monthly))}</strong></div>
+        <div><span>{optionIsCheaper ? 'Economia anual' : 'Custo adicional anual'}</span><strong>{formatCurrency(Math.abs(result.operationalSavings.annual))}</strong></div>
+        <div><span>{optionIsCheaper ? 'Economia mensal' : 'Custo adicional mensal'}</span><strong>{formatCurrency(Math.abs(monthly))}</strong></div>
         <div><span>Diferença por km</span><strong>{formatCostPerKm(Math.abs(result.operationalSavings.perKm))}</strong></div>
         <div><span>Diferença percentual de caixa</span><strong>{formatPercentageValue(result.cashDifference.percentage.annual)}</strong></div>
       </div>
-      <p>A direção do cálculo é veículo atual menos candidato. Valores positivos indicam economia com o candidato.</p>
+      <p>A direção do cálculo é veículo atual menos opção de troca. Valores positivos indicam economia com {result.candidate.vehicle.name}.</p>
     </section>
   )
 }
@@ -73,7 +70,7 @@ export function ComparisonScreen() {
     return <div className="empty-state page-empty"><h2>Cadastre o veículo atual</h2><p>O veículo atual é a referência necessária para calcular as diferenças de TCO.</p></div>
   }
   if (state.candidates.length === 0) {
-    return <div className="empty-state page-empty"><h2>Adicione um candidato</h2><p>Cadastre ao menos um veículo candidato para iniciar a comparação.</p></div>
+    return <div className="empty-state page-empty"><h2>Adicione uma opção de troca</h2><p>Cadastre ao menos uma opção de troca para iniciar a comparação.</p></div>
   }
 
   let result: IntegratedVehicleComparison | null = null
@@ -92,25 +89,25 @@ export function ComparisonScreen() {
         <div>
           <span className="eyebrow">Decisão orientada por custos</span>
           <h1>Comparação</h1>
-          <p>Compare o TCO anual normalizado do veículo atual com um candidato.</p>
+          <p>Compare o TCO anual normalizado do veículo atual com uma opção de troca.</p>
         </div>
         <label className="field select-candidate">
-          <span>Candidato</span>
+          <span>Veículo comparado</span>
           <select value={selected} onChange={(event) => updateState((current) => selectComparisonCandidate(current, event.target.value || null))}>
-            <option value="">Selecione um candidato</option>
+            <option value="">Selecione um veículo</option>
             {state.candidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.vehicle.name}</option>)}
           </select>
         </label>
       </header>
 
-      {!selected && <div className="empty-state"><h2>Selecione um candidato</h2><p>Escolha um veículo acima para visualizar o comparativo completo.</p></div>}
+      {!selected && <div className="empty-state"><h2>Selecione um veículo comparado</h2><p>Escolha um veículo acima para visualizar o comparativo completo.</p></div>}
       {error && <div className="alert alert-error">{error}</div>}
       {result && (
         <>
           <ComparisonSummary result={result} />
           <div className="comparison-grid">
             <TcoPanel label="Veículo atual" name={result.current.vehicle.name} tco={result.currentTco} emphasized={result.currentTco.cashTco.monthly <= result.candidateTco.cashTco.monthly} />
-            <TcoPanel label="Candidato" name={result.candidate.vehicle.name} tco={result.candidateTco} emphasized={result.candidateTco.cashTco.monthly < result.currentTco.cashTco.monthly} />
+            <TcoPanel label="Opção de troca" name={result.candidate.vehicle.name} tco={result.candidateTco} emphasized={result.candidateTco.cashTco.monthly < result.currentTco.cashTco.monthly} />
           </div>
           <section className="data-card">
             <h2>Diferenças</h2>

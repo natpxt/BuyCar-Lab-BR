@@ -47,6 +47,38 @@ export function formatCostPerKm(value: number): string {
   return `${perKmFormatter.format(value)}/km`
 }
 
+export function formatOperationalHeadline(
+  vehicleName: string,
+  monthlySavings: number,
+): string {
+  if (monthlySavings > 0) {
+    return `${vehicleName} é ${formatCurrency(monthlySavings)} mais barato por mês`
+  }
+  if (monthlySavings < 0) {
+    return `${vehicleName} custa ${formatCurrency(Math.abs(monthlySavings))} a mais por mês`
+  }
+  return `${vehicleName} tem o mesmo custo operacional mensal`
+}
+
+export function formatSignedMonthlyCurrency(value: number): string {
+  if (value > 0) {
+    return `+ ${formatCurrency(value)}/mês`
+  }
+  if (value < 0) {
+    return `- ${formatCurrency(Math.abs(value))}/mês`
+  }
+  return `${formatCurrency(0)}/mês`
+}
+
+export function formatOperationalComparisonLabel(
+  currentVehicleName: string,
+  monthlySavings: number,
+): string {
+  return monthlySavings >= 0
+    ? `Economia em relação ao ${currentVehicleName}`
+    : `Custo adicional em relação ao ${currentVehicleName}`
+}
+
 export function parsePtBrNumber(value: string, field: string): number {
   const normalized = value
     .trim()

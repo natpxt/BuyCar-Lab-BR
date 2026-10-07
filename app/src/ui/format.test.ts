@@ -4,6 +4,9 @@ import {
   formatCostPerKm,
   formatCurrency,
   formatDecimalPercentage,
+  formatOperationalComparisonLabel,
+  formatOperationalHeadline,
+  formatSignedMonthlyCurrency,
   parsePtBrNumber,
   percentageInputToDecimal,
 } from './format'
@@ -24,5 +27,32 @@ describe('helpers de apresentação', () => {
     expect(formatDecimalPercentage(0.017)).toBe('1,70%')
     expect(formatCostPerKm(0.5274)).toContain('0,527')
     expect(formatCostPerKm(0.5274).endsWith('/km')).toBe(true)
+  })
+
+  it('usa o nome real do veículo na frase operacional', () => {
+    expect(formatOperationalHeadline('Dolphin Mini', 1_696.02)).toBe(
+      'Dolphin Mini é R$ 1.696,02 mais barato por mês',
+    )
+    expect(formatOperationalHeadline('Dolphin Mini', -230)).toBe(
+      'Dolphin Mini custa R$ 230,00 a mais por mês',
+    )
+    expect(formatOperationalHeadline('Dolphin Mini', 0)).toBe(
+      'Dolphin Mini tem o mesmo custo operacional mensal',
+    )
+  })
+
+  it('formata impacto mensal com sinal explícito', () => {
+    expect(formatSignedMonthlyCurrency(450)).toContain('+ R$')
+    expect(formatSignedMonthlyCurrency(-230)).toContain('- R$')
+    expect(formatSignedMonthlyCurrency(0)).toContain('R$')
+  })
+
+  it('usa o nome atual no label comparativo', () => {
+    expect(formatOperationalComparisonLabel('Tiida', 230)).toBe(
+      'Economia em relação ao Tiida',
+    )
+    expect(formatOperationalComparisonLabel('Tiida', -230)).toBe(
+      'Custo adicional em relação ao Tiida',
+    )
   })
 })

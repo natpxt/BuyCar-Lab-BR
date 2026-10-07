@@ -29,7 +29,7 @@ export function FinancingScreen() {
   }
 
   if (state.candidates.length === 0) {
-    return <div className="empty-state page-empty"><h2>Cadastre um candidato</h2><p>O financiamento precisa estar associado a um veículo candidato.</p></div>
+    return <div className="empty-state page-empty"><h2>Cadastre uma opção de troca</h2><p>O financiamento precisa estar associado ao veículo que você pretende comprar.</p></div>
   }
 
   return (
@@ -41,15 +41,15 @@ export function FinancingScreen() {
           <p>Configure o contrato, aportes e cobranças. Os resultados são recalculados a partir das entradas salvas.</p>
         </div>
         <label className="field select-candidate">
-          <span>Candidato financiado</span>
+          <span>Veículo a financiar</span>
           <select value={selectedId} onChange={(event) => updateState((current) => selectFinancingCandidate(current, event.target.value || null))}>
-            <option value="">Selecione um candidato</option>
+            <option value="">Selecione um veículo</option>
             {state.candidates.map((item) => <option key={item.id} value={item.id}>{item.vehicle.name}</option>)}
           </select>
         </label>
       </header>
 
-      {!candidate && <div className="empty-state"><h2>Selecione um candidato</h2><p>Escolha o veículo que será usado nesta simulação.</p></div>}
+      {!candidate && <div className="empty-state"><h2>Selecione o veículo a financiar</h2><p>Escolha o veículo que será usado nesta simulação.</p></div>}
       {candidate && (
         <>
           {!initialValue && <div className="alert alert-info">Financiamento ainda não configurado. Preencha as entradas abaixo para gerar os resultados.</div>}

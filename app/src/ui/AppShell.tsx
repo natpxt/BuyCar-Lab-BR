@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useAppState } from '../application/AppStateProvider'
 
-export type AppArea = 'vehicles' | 'comparison' | 'financing'
+export type AppArea = 'vehicles' | 'comparison' | 'financing' | 'decision'
 
 interface AppShellProps {
   readonly activeArea: AppArea
@@ -13,6 +13,7 @@ const areas: readonly { id: AppArea; label: string; description: string }[] = [
   { id: 'vehicles', label: 'Veículos', description: 'Cadastros e custos' },
   { id: 'comparison', label: 'Comparação', description: 'TCO lado a lado' },
   { id: 'financing', label: 'Financiamento', description: 'PRICE e aportes' },
+  { id: 'decision', label: 'Ciladômetro', description: 'Decisão final' },
 ]
 
 export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {

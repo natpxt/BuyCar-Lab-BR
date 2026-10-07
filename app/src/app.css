@@ -601,6 +601,75 @@ tbody tr:hover {
   background: #f7faf8;
 }
 
+.decision-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid #e2c782;
+  border-radius: 22px;
+  color: #3f3214;
+  background: linear-gradient(135deg, #fffdf7, #f7eac4);
+  box-shadow: var(--shadow);
+}
+
+.decision-hero-saving {
+  border-color: #84bda0;
+  color: #173d2e;
+  background: linear-gradient(135deg, #f7fcf9, #dff3e9);
+}
+
+.decision-hero h2 {
+  margin: 8px 0 20px;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+.decision-hero p {
+  margin-bottom: 7px;
+}
+
+.decision-hero > div > strong {
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+}
+
+.decision-hero-metrics {
+  display: grid;
+  gap: 10px;
+}
+
+.decision-hero-metrics > div,
+.decision-highlights > div {
+  padding: 16px;
+  border: 1px solid rgba(29, 107, 80, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.decision-hero-metrics span,
+.decision-highlights span,
+.decision-highlights small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.decision-hero-metrics strong,
+.decision-highlights strong {
+  display: block;
+  margin-top: 5px;
+}
+
+.decision-highlights {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.decision-highlights small {
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
 @media (max-width: 1080px) {
   .sidebar {
     position: static;
@@ -613,7 +682,7 @@ tbody tr:hover {
   }
 
   .main-nav {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .sidebar-footer {
@@ -627,7 +696,8 @@ tbody tr:hover {
 
   .form-grid-four,
   .insight-metrics,
-  .strategy-grid {
+  .strategy-grid,
+  .decision-highlights {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -651,7 +721,9 @@ tbody tr:hover {
   .results-grid,
   .insight-metrics,
   .repeat-row,
-  .repeat-row-charge {
+  .repeat-row-charge,
+  .decision-hero,
+  .decision-highlights {
     grid-template-columns: 1fr;
   }
 

@@ -52,8 +52,8 @@ export function VehiclesScreen() {
       <VehicleForm
         initialVehicle={editor.record?.vehicle}
         title={editor.record
-          ? `Editar ${current ? 'veículo atual' : 'candidato'}`
-          : `Cadastrar ${current ? 'veículo atual' : 'candidato'}`}
+          ? `Editar ${current ? 'veículo atual' : 'opção de troca'}`
+          : `Cadastrar ${current ? 'veículo atual' : 'opção de troca'}`}
         submitLabel="Salvar veículo"
         onCancel={() => setEditor(null)}
         onSubmit={saveVehicle}
@@ -70,7 +70,7 @@ export function VehiclesScreen() {
           <p>Cadastre os dados usados nos cálculos de TCO e financiamento.</p>
         </div>
         <button className="button button-primary" onClick={() => setEditor({ kind: 'candidate' })}>
-          Adicionar candidato
+          Adicionar opção
         </button>
       </header>
 
@@ -107,13 +107,13 @@ export function VehiclesScreen() {
         <div className="section-heading">
           <div>
             <span className="eyebrow">Alternativas</span>
-            <h2>Candidatos</h2>
+            <h2>Opções de troca</h2>
           </div>
           <span className="count-badge">{state.candidates.length}</span>
         </div>
         {state.candidates.length === 0 ? (
           <div className="empty-state">
-            <h3>Nenhum candidato cadastrado</h3>
+            <h3>Nenhuma opção de troca cadastrada</h3>
             <p>Adicione um veículo para comparar custos e simular a compra.</p>
           </div>
         ) : (
