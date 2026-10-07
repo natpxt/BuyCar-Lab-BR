@@ -528,6 +528,101 @@ describe('validação da agenda de aportes', () => {
 
     expect(issues).toContainEqual(expect.objectContaining({ field }))
   })
+
+  it('rejeita substituição manual sem aporte recorrente', () => {
+    const issues = getScenarioValidationIssues({
+      ...goldenInput,
+      strategy: 'reducePayment',
+      extraPaymentSchedule: {
+        manualReplacements: [{ amount: 100, period: 2 }],
+      },
+    })
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      field: 'extraPaymentSchedule.manualReplacements',
+    }))
+  })
+
+  it('rejeita substituição fora da frequência recorrente', () => {
+    const issues = getScenarioValidationIssues({
+      ...goldenInput,
+      strategy: 'reducePayment',
+      extraPaymentSchedule: {
+        recurring: {
+          amount: 100,
+          startPeriod: 2,
+          frequencyMonths: 2,
+        },
+        manualReplacements: [{ amount: 200, period: 3 }],
+      },
+    })
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      field: 'extraPaymentSchedule.manualReplacements.0.period',
+      code: 'outOfRange',
+    }))
+  })
+
+  it('aceita substituição que coincide com a frequência recorrente', () => {
+    const result = calculatePriceScenario({
+      ...goldenInput,
+      strategy: 'reducePayment',
+      extraPaymentSchedule: {
+        recurring: {
+          amount: 100,
+          startPeriod: 2,
+          frequencyMonths: 2,
+        },
+        manualReplacements: [{ amount: 200, period: 4 }],
+      },
+    })
+
+    expect(result.schedule[3].extraPaymentApplied).toBe(200)
+  })
+
+  it('rejeita substituição posterior ao fim da recorrência', () => {
+    const issues = getScenarioValidationIssues({
+      ...goldenInput,
+      strategy: 'reducePayment',
+      extraPaymentSchedule: {
+        recurring: {
+          amount: 100,
+          startPeriod: 2,
+          endPeriod: 6,
+          frequencyMonths: 2,
+        },
+        manualReplacements: [{ amount: 200, period: 8 }],
+      },
+    })
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      field: 'extraPaymentSchedule.manualReplacements.0.period',
+      code: 'outOfRange',
+    }))
+  })
+
+  it('rejeita duas substituições no mesmo período', () => {
+    const issues = getScenarioValidationIssues({
+      ...goldenInput,
+      strategy: 'reducePayment',
+      extraPaymentSchedule: {
+        recurring: {
+          amount: 100,
+          startPeriod: 2,
+          frequencyMonths: 2,
+        },
+        manualReplacements: [
+          { amount: 200, period: 4 },
+          { amount: 300, period: 4 },
+        ],
+      },
+    })
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      field: 'extraPaymentSchedule.manualReplacements.1.period',
+      code: 'outOfRange',
+    }))
+  })
 })
 
 describe('PRICE com reduceTerm', () => {

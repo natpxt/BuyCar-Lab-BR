@@ -249,6 +249,11 @@ function validateExtraPaymentSchedule(
   }
 
   const schedule = input as Record<string, unknown>
+  let validRecurring: {
+    readonly startPeriod: number
+    readonly endPeriod?: number
+    readonly frequencyMonths: number
+  } | null = null
   if (schedule.oneTime !== undefined) {
     if (!Array.isArray(schedule.oneTime)) {
       issues.push({
@@ -296,15 +301,16 @@ function validateExtraPaymentSchedule(
         startPeriod,
         { positive: true, integer: true },
       )
-      validateNumber(
+      const frequencyIsValid = validateNumber(
         issues,
         `${prefix}.frequencyMonths`,
         recurring.frequencyMonths,
         { positive: true, integer: true },
       )
 
+      let endIsValid = true
       if (endPeriod !== undefined) {
-        const endIsValid = validateNumber(
+        endIsValid = validateNumber(
           issues,
           `${prefix}.endPeriod`,
           endPeriod,
@@ -313,13 +319,29 @@ function validateExtraPaymentSchedule(
         if (
           startIsValid
           && endIsValid
-          && endPeriod < startPeriod
+          && (endPeriod as number) < (startPeriod as number)
         ) {
           issues.push({
             field: `${prefix}.endPeriod`,
             code: 'outOfRange',
             message: `${prefix}.endPeriod não pode anteceder startPeriod`,
           })
+        }
+      }
+
+      if (
+        startIsValid
+        && frequencyIsValid
+        && endIsValid
+        && (
+          endPeriod === undefined
+          || (endPeriod as number) >= (startPeriod as number)
+        )
+      ) {
+        validRecurring = {
+          startPeriod: startPeriod as number,
+          endPeriod: endPeriod as number | undefined,
+          frequencyMonths: recurring.frequencyMonths as number,
         }
       }
     }
@@ -333,6 +355,17 @@ function validateExtraPaymentSchedule(
         message: 'extraPaymentSchedule.manualReplacements deve ser uma lista',
       })
     } else {
+      if (
+        schedule.manualReplacements.length > 0
+        && validRecurring === null
+      ) {
+        issues.push({
+          field: 'extraPaymentSchedule.manualReplacements',
+          code: 'required',
+          message: 'manualReplacements exige recurring válido',
+        })
+      }
+      const replacementPeriods = new Set<number>()
       schedule.manualReplacements.forEach((entry, index) => {
         const prefix = `extraPaymentSchedule.manualReplacements.${index}`
         if (typeof entry !== 'object' || entry === null) {
@@ -345,10 +378,47 @@ function validateExtraPaymentSchedule(
         }
         const replacement = entry as Record<string, unknown>
         validateNumber(issues, `${prefix}.amount`, replacement.amount)
-        validateNumber(issues, `${prefix}.period`, replacement.period, {
-          positive: true,
-          integer: true,
-        })
+        const periodIsValid = validateNumber(
+          issues,
+          `${prefix}.period`,
+          replacement.period,
+          {
+            positive: true,
+            integer: true,
+          },
+        )
+        if (!periodIsValid) {
+          return
+        }
+        const replacementPeriod = replacement.period as number
+
+        if (replacementPeriods.has(replacementPeriod)) {
+          issues.push({
+            field: `${prefix}.period`,
+            code: 'outOfRange',
+            message: `${prefix}.period não pode ser duplicado`,
+          })
+        }
+        replacementPeriods.add(replacementPeriod)
+
+        if (
+          validRecurring !== null
+          && (
+            replacementPeriod < validRecurring.startPeriod
+            || (
+              validRecurring.endPeriod !== undefined
+              && replacementPeriod > validRecurring.endPeriod
+            )
+            || (replacementPeriod - validRecurring.startPeriod)
+              % validRecurring.frequencyMonths !== 0
+          )
+        ) {
+          issues.push({
+            field: `${prefix}.period`,
+            code: 'outOfRange',
+            message: `${prefix}.period deve coincidir com uma ocorrência de recurring`,
+          })
+        }
       })
     }
   }
