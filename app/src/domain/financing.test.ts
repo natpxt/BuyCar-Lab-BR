@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  calculateFinancedAmount,
   calculateMonthlyEffectiveRate,
   calculatePriceBaseline,
   calculatePriceScenario,
+  comparePriceStrategies,
   FinancingValidationError,
   type FinancingValidationIssue,
   type PriceFinancingInput,
@@ -522,6 +524,386 @@ describe('validação da agenda de aportes', () => {
       ...goldenInput,
       strategy: 'reducePayment',
       extraPaymentSchedule,
+    })
+
+    expect(issues).toContainEqual(expect.objectContaining({ field }))
+  })
+})
+
+describe('PRICE com reduceTerm', () => {
+  it('mantém prestação literal e reduz o prazo a taxa zero', () => {
+    const result = calculatePriceScenario({
+      principal: 1_200,
+      termMonths: 6,
+      rate: { value: 0, periodicity: 'monthly' },
+      strategy: 'reduceTerm',
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 400, period: 1 }],
+      },
+    })
+
+    expect(result.initialPayment).toBe(200)
+    expect(result.schedule[0]).toMatchObject({
+      contractualPayment: 200,
+      principalAmortizedByPayment: 200,
+      principalAmortizedByExtraPayment: 400,
+      totalPayment: 600,
+      closingBalance: 600,
+    })
+    expect(result.schedule.map(
+      (entry) => entry.contractualPayment,
+    )).toEqual([200, 200, 200, 200])
+    expect(result.totalExtraPayments).toBe(400)
+    expect(result.totalDisbursed).toBe(1_200)
+    expect(result.effectiveTermMonths).toBe(4)
+    expect(result.payoffPeriod).toBe(4)
+    expect(result.schedule.at(-1)?.closingBalance).toBe(0)
+  })
+
+  it('normaliza somente o resíduo numérico e quita 1000 em três períodos', () => {
+    const result = calculatePriceScenario({
+      principal: 1_000,
+      termMonths: 6,
+      rate: { value: 0, periodicity: 'monthly' },
+      strategy: 'reduceTerm',
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 500, period: 1 }],
+      },
+    })
+
+    expect(result.effectiveTermMonths).toBe(3)
+    expect(result.payoffPeriod).toBe(3)
+    expect(result.schedule).toHaveLength(3)
+    expect(result.schedule.at(-1)?.closingBalance).toBe(0)
+    expect(result.totalPrincipalAmortized).toBeCloseTo(1_000, 12)
+    expect(result.totalDisbursed).toBeCloseTo(1_000, 12)
+  })
+
+  it('preserva saldo pequeno que excede a tolerância numérica', () => {
+    const result = calculatePriceScenario({
+      principal: 1_000,
+      termMonths: 6,
+      rate: { value: 0, periodicity: 'monthly' },
+      strategy: 'reduceTerm',
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 499.999999999, period: 1 }],
+      },
+    })
+
+    expect(result.effectiveTermMonths).toBe(4)
+    expect(result.schedule[2].closingBalance).toBeGreaterThan(0)
+    expect(result.schedule.at(-1)?.closingBalance).toBe(0)
+  })
+
+  it('aplica aportes recorrentes e antecipa a quitação', () => {
+    const result = calculatePriceScenario({
+      principal: 1_200,
+      termMonths: 12,
+      rate: { value: 0, periodicity: 'monthly' },
+      strategy: 'reduceTerm',
+      extraPaymentSchedule: {
+        recurring: {
+          amount: 100,
+          startPeriod: 1,
+          frequencyMonths: 1,
+        },
+      },
+    })
+
+    expect(result.effectiveTermMonths).toBe(6)
+    expect(result.totalExtraPayments).toBe(600)
+    expect(result.schedule.every(
+      (entry) => entry.contractualPayment === 100,
+    )).toBe(true)
+  })
+
+  it('reduz prazo e juros mantendo a prestação de referência', () => {
+    const baseline = calculatePriceBaseline(goldenInput)
+    const result = calculatePriceScenario({
+      ...goldenInput,
+      strategy: 'reduceTerm',
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 10_000, period: 1 }],
+      },
+    })
+
+    expect(result.schedule[0].contractualPayment).toBe(
+      baseline.initialPayment,
+    )
+    expect(result.schedule[1].contractualPayment).toBe(
+      baseline.initialPayment,
+    )
+    expect(result.effectiveTermMonths).toBeLessThan(
+      baseline.effectiveTermMonths,
+    )
+    expect(result.totalInterest).toBeLessThan(baseline.totalInterest)
+    expect(result.schedule.every(
+      (entry) => entry.closingBalance >= 0,
+    )).toBe(true)
+  })
+
+  it('limita aporte e quita antecipadamente sem saldo negativo', () => {
+    const result = calculatePriceScenario({
+      principal: 1_000,
+      termMonths: 10,
+      rate: { value: 0, periodicity: 'monthly' },
+      strategy: 'reduceTerm',
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 5_000, period: 1 }],
+      },
+    })
+
+    expect(result.schedule[0].contractualPayment).toBe(100)
+    expect(result.schedule[0].extraPaymentApplied).toBe(900)
+    expect(result.schedule[0].closingBalance).toBe(0)
+    expect(result.effectiveTermMonths).toBe(1)
+    expect(result.totalDisbursed).toBe(1_000)
+  })
+})
+
+describe('comparação de estratégias PRICE', () => {
+  it('compara none, reducePayment e reduceTerm com a mesma agenda', () => {
+    const comparison = comparePriceStrategies({
+      ...goldenInput,
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 10_000, period: 1 }],
+      },
+    })
+
+    expect(comparison.none.strategy).toBe('none')
+    expect(comparison.reducePayment.strategy).toBe('reducePayment')
+    expect(comparison.reduceTerm.strategy).toBe('reduceTerm')
+    expect(comparison.none.totalExtraPayments).toBe(0)
+    expect(comparison.none.interestSavings).toBe(0)
+    expect(comparison.none.monthsSaved).toBe(0)
+    expect(comparison.reducePayment.totalExtraPayments).toBe(10_000)
+    expect(comparison.reducePayment.interestSavings).toBeGreaterThan(0)
+    expect(comparison.reducePayment.monthsSaved).toBe(0)
+    expect(comparison.reduceTerm.totalExtraPayments).toBe(10_000)
+    expect(comparison.reduceTerm.interestSavings).toBeGreaterThan(0)
+    expect(comparison.reduceTerm.monthsSaved).toBeGreaterThan(0)
+    expect(comparison.reduceTerm.initialPayment).toBe(
+      comparison.none.initialPayment,
+    )
+  })
+
+  it('mantém o baseline idêntico independentemente da agenda comparada', () => {
+    const first = comparePriceStrategies({
+      ...goldenInput,
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 1_000, period: 1 }],
+      },
+    })
+    const second = comparePriceStrategies({
+      ...goldenInput,
+      extraPaymentSchedule: {
+        recurring: {
+          amount: 2_000,
+          startPeriod: 2,
+          frequencyMonths: 2,
+        },
+      },
+    })
+
+    expect(first.none).toEqual(second.none)
+  })
+
+  it('é determinística e não modifica contrato, agenda ou cobranças', () => {
+    const input = {
+      ...goldenInput,
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 1_000, period: 2 }],
+      },
+      periodicCharges: [{
+        description: 'Seguro',
+        amount: 75,
+        startPeriod: 1,
+        frequencyMonths: 1,
+      }],
+    }
+    const before = structuredClone(input)
+    const first = comparePriceStrategies(input)
+    const second = comparePriceStrategies(input)
+
+    expect(input).toEqual(before)
+    expect(second).toEqual(first)
+  })
+})
+
+describe('valor financiado', () => {
+  it('calcula o valor a partir dos dados da compra', () => {
+    expect(calculateFinancedAmount({
+      price: 120_000,
+      tradeInValue: 40_000,
+      additionalDownPayment: 10_000,
+      financedCosts: 5_000,
+    })).toEqual({ amount: 75_000, source: 'calculated' })
+  })
+
+  it('usa o valor manual somente como fallback sem preço', () => {
+    expect(calculateFinancedAmount({ manualAmount: 80_000 })).toEqual({
+      amount: 80_000,
+      source: 'manual',
+    })
+  })
+
+  it('prioriza o calculado quando preço e valor manual estão presentes', () => {
+    expect(calculateFinancedAmount({
+      price: 100_000,
+      tradeInValue: 20_000,
+      manualAmount: 999_999,
+    })).toEqual({ amount: 80_000, source: 'calculated' })
+  })
+
+  it('ignora valor manual inválido quando o preço está disponível', () => {
+    expect(calculateFinancedAmount({
+      price: 100_000,
+      tradeInValue: 20_000,
+      manualAmount: Number.NaN,
+    })).toEqual({ amount: 80_000, source: 'calculated' })
+  })
+
+  it('limita o valor calculado ao mínimo zero', () => {
+    expect(calculateFinancedAmount({
+      price: 50_000,
+      tradeInValue: 40_000,
+      additionalDownPayment: 20_000,
+    })).toEqual({ amount: 0, source: 'calculated' })
+  })
+
+  it.each([
+    [{ price: -1 }, 'price'],
+    [{ price: Number.POSITIVE_INFINITY }, 'price'],
+    [{ manualAmount: -1 }, 'manualAmount'],
+    [{}, 'manualAmount'],
+  ])('rejeita entrada inválida em %s', (input, field) => {
+    expect(() => calculateFinancedAmount(input)).toThrowError(
+      expect.objectContaining({
+        issues: expect.arrayContaining([
+          expect.objectContaining({ field }),
+        ]),
+      }),
+    )
+  })
+})
+
+describe('cobranças periódicas', () => {
+  it('aplica recorrências discriminadas e soma cada cobrança uma vez', () => {
+    const result = calculatePriceScenario({
+      principal: 1_000,
+      termMonths: 4,
+      rate: { value: 0, periodicity: 'monthly' },
+      strategy: 'none',
+      periodicCharges: [
+        {
+          description: 'Seguro',
+          amount: 50,
+          startPeriod: 1,
+          endPeriod: 3,
+          frequencyMonths: 1,
+        },
+        {
+          description: 'Tarifa',
+          amount: 10,
+          startPeriod: 2,
+          frequencyMonths: 2,
+        },
+      ],
+    })
+
+    expect(result.schedule.map(
+      (entry) => entry.periodicChargeTotal,
+    )).toEqual([50, 60, 50, 10])
+    expect(result.schedule[1].periodicCharges).toEqual([
+      { description: 'Seguro', amount: 50 },
+      { description: 'Tarifa', amount: 10 },
+    ])
+    expect(result.totalPeriodicCharges).toBe(170)
+    expect(result.totalDisbursed).toBe(1_170)
+  })
+
+  it('não altera saldo, juros ou principal do contrato', () => {
+    const withoutCharges = calculatePriceScenario({
+      ...goldenInput,
+      strategy: 'none',
+    })
+    const withCharges = calculatePriceScenario({
+      ...goldenInput,
+      strategy: 'none',
+      periodicCharges: [{
+        description: 'Seguro',
+        amount: 75,
+        startPeriod: 1,
+        frequencyMonths: 1,
+      }],
+    })
+
+    expect(withCharges.totalInterest).toBe(withoutCharges.totalInterest)
+    expect(withCharges.totalPrincipalAmortized).toBe(
+      withoutCharges.totalPrincipalAmortized,
+    )
+    expect(withCharges.schedule.map((entry) => ({
+      openingBalance: entry.openingBalance,
+      interest: entry.interest,
+      principal: entry.principalAmortized,
+      closingBalance: entry.closingBalance,
+    }))).toEqual(withoutCharges.schedule.map((entry) => ({
+      openingBalance: entry.openingBalance,
+      interest: entry.interest,
+      principal: entry.principalAmortized,
+      closingBalance: entry.closingBalance,
+    })))
+  })
+
+  it('compõe desembolso sem dupla contagem de principal ou aporte', () => {
+    const result = calculatePriceScenario({
+      principal: 1_200,
+      termMonths: 6,
+      rate: { value: 0, periodicity: 'monthly' },
+      strategy: 'reduceTerm',
+      extraPaymentSchedule: {
+        oneTime: [{ amount: 400, period: 1 }],
+      },
+      periodicCharges: [{
+        description: 'Tarifa',
+        amount: 10,
+        startPeriod: 1,
+        frequencyMonths: 1,
+      }],
+    })
+
+    expect(result.totalPrincipalAmortized).toBe(1_200)
+    expect(result.totalExtraPayments).toBe(400)
+    expect(result.totalPeriodicCharges).toBe(40)
+    expect(result.totalDisbursed).toBe(1_240)
+    expect(result.totalDisbursed).toBe(
+      result.totalPrincipalAmortized
+        + result.totalInterest
+        + result.totalPeriodicCharges,
+    )
+  })
+
+  it.each([
+    [{ description: '', amount: 10, startPeriod: 1, frequencyMonths: 1 },
+      'periodicCharges.0.description'],
+    [{ description: 'Seguro', amount: -1, startPeriod: 1, frequencyMonths: 1 },
+      'periodicCharges.0.amount'],
+    [{ description: 'Seguro', amount: 10, startPeriod: 0, frequencyMonths: 1 },
+      'periodicCharges.0.startPeriod'],
+    [{ description: 'Seguro', amount: 10, startPeriod: 1, frequencyMonths: 0 },
+      'periodicCharges.0.frequencyMonths'],
+    [{
+      description: 'Seguro',
+      amount: 10,
+      startPeriod: 3,
+      endPeriod: 2,
+      frequencyMonths: 1,
+    }, 'periodicCharges.0.endPeriod'],
+  ])('rejeita cobrança inválida em %s', (charge, field) => {
+    const issues = getScenarioValidationIssues({
+      ...goldenInput,
+      strategy: 'none',
+      periodicCharges: [charge],
     })
 
     expect(issues).toContainEqual(expect.objectContaining({ field }))

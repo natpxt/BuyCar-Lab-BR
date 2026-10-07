@@ -12,7 +12,7 @@ export interface PriceFinancingInput {
   readonly rate: EffectiveRate
 }
 
-export type ExtraPaymentStrategy = 'none' | 'reducePayment'
+export type ExtraPaymentStrategy = 'none' | 'reducePayment' | 'reduceTerm'
 
 export interface OneTimeExtraPayment {
   readonly amount: number
@@ -37,9 +37,43 @@ export interface ExtraPaymentSchedule {
   readonly manualReplacements?: readonly ManualExtraPaymentReplacement[]
 }
 
+export interface PeriodicCharge {
+  readonly description: string
+  readonly amount: number
+  readonly startPeriod: number
+  readonly endPeriod?: number
+  readonly frequencyMonths: number
+}
+
+export interface AppliedPeriodicCharge {
+  readonly description: string
+  readonly amount: number
+}
+
 export interface PriceFinancingScenarioInput extends PriceFinancingInput {
   readonly strategy: ExtraPaymentStrategy
   readonly extraPaymentSchedule?: ExtraPaymentSchedule
+  readonly periodicCharges?: readonly PeriodicCharge[]
+}
+
+export interface PriceStrategyComparisonInput extends PriceFinancingInput {
+  readonly extraPaymentSchedule?: ExtraPaymentSchedule
+  readonly periodicCharges?: readonly PeriodicCharge[]
+}
+
+export interface FinancedAmountInput {
+  readonly price?: number
+  readonly tradeInValue?: number
+  readonly additionalDownPayment?: number
+  readonly financedCosts?: number
+  readonly manualAmount?: number
+}
+
+export type FinancedAmountSource = 'calculated' | 'manual'
+
+export interface FinancedAmountResult {
+  readonly amount: number
+  readonly source: FinancedAmountSource
 }
 
 export interface PriceScheduleEntry {
@@ -50,6 +84,8 @@ export interface PriceScheduleEntry {
   readonly principalAmortizedByPayment: number
   readonly principalAmortizedByExtraPayment: number
   readonly extraPaymentApplied: number
+  readonly periodicCharges: readonly AppliedPeriodicCharge[]
+  readonly periodicChargeTotal: number
   readonly totalPayment: number
   /** Alias compatível: principal total amortizado no período. */
   readonly principalAmortized: number
@@ -66,6 +102,7 @@ export interface PriceFinancingResult {
   readonly schedule: readonly PriceScheduleEntry[]
   readonly totalInterest: number
   readonly totalExtraPayments: number
+  readonly totalPeriodicCharges: number
   readonly totalPrincipalAmortized: number
   readonly totalDisbursed: number
   /** Alias compatível de totalDisbursed. */
@@ -73,6 +110,17 @@ export interface PriceFinancingResult {
   readonly originalTermMonths: number
   readonly effectiveTermMonths: number
   readonly payoffPeriod: number
+}
+
+export interface ComparedPriceScenario extends PriceFinancingResult {
+  readonly interestSavings: number
+  readonly monthsSaved: number
+}
+
+export interface PriceStrategyComparison {
+  readonly none: ComparedPriceScenario
+  readonly reducePayment: ComparedPriceScenario
+  readonly reduceTerm: ComparedPriceScenario
 }
 
 export type FinancingValidationCode =
@@ -308,6 +356,79 @@ function validateExtraPaymentSchedule(
   return issues
 }
 
+function validatePeriodicCharges(
+  input: unknown,
+): FinancingValidationIssue[] {
+  const issues: FinancingValidationIssue[] = []
+  if (input === undefined) {
+    return issues
+  }
+  if (!Array.isArray(input)) {
+    return [{
+      field: 'periodicCharges',
+      code: 'required',
+      message: 'periodicCharges deve ser uma lista',
+    }]
+  }
+
+  input.forEach((entry, index) => {
+    const prefix = `periodicCharges.${index}`
+    if (typeof entry !== 'object' || entry === null) {
+      issues.push({
+        field: prefix,
+        code: 'required',
+        message: `${prefix} deve ser um objeto`,
+      })
+      return
+    }
+
+    const charge = entry as Record<string, unknown>
+    if (
+      typeof charge.description !== 'string'
+      || charge.description.trim().length === 0
+    ) {
+      issues.push({
+        field: `${prefix}.description`,
+        code: 'required',
+        message: `${prefix}.description é obrigatória`,
+      })
+    }
+    validateNumber(issues, `${prefix}.amount`, charge.amount)
+    const startPeriod = charge.startPeriod
+    const endPeriod = charge.endPeriod
+    const startIsValid = validateNumber(
+      issues,
+      `${prefix}.startPeriod`,
+      startPeriod,
+      { positive: true, integer: true },
+    )
+    validateNumber(
+      issues,
+      `${prefix}.frequencyMonths`,
+      charge.frequencyMonths,
+      { positive: true, integer: true },
+    )
+
+    if (endPeriod !== undefined) {
+      const endIsValid = validateNumber(
+        issues,
+        `${prefix}.endPeriod`,
+        endPeriod,
+        { positive: true, integer: true },
+      )
+      if (startIsValid && endIsValid && endPeriod < startPeriod) {
+        issues.push({
+          field: `${prefix}.endPeriod`,
+          code: 'outOfRange',
+          message: `${prefix}.endPeriod não pode anteceder startPeriod`,
+        })
+      }
+    }
+  })
+
+  return issues
+}
+
 export function validatePriceFinancingScenarioInput(
   input: unknown,
 ): FinancingValidationIssue[] {
@@ -317,14 +438,19 @@ export function validatePriceFinancingScenarioInput(
   }
 
   const scenario = input as Record<string, unknown>
-  if (scenario.strategy !== 'none' && scenario.strategy !== 'reducePayment') {
+  if (
+    scenario.strategy !== 'none'
+    && scenario.strategy !== 'reducePayment'
+    && scenario.strategy !== 'reduceTerm'
+  ) {
     issues.push({
       field: 'strategy',
       code: 'unsupported',
-      message: 'strategy deve ser none ou reducePayment',
+      message: 'strategy deve ser none, reducePayment ou reduceTerm',
     })
   }
   issues.push(...validateExtraPaymentSchedule(scenario.extraPaymentSchedule))
+  issues.push(...validatePeriodicCharges(scenario.periodicCharges))
   return issues
 }
 
@@ -355,6 +481,67 @@ function assertFiniteResult(field: string, value: number): number {
     }])
   }
   return value
+}
+
+export function calculateFinancedAmount(
+  input: FinancedAmountInput,
+): FinancedAmountResult {
+  if (typeof input !== 'object' || input === null) {
+    throw new FinancingValidationError([{
+      field: 'financedAmount',
+      code: 'required',
+      message: 'financedAmount é obrigatório',
+    }])
+  }
+
+  const issues: FinancingValidationIssue[] = []
+  const optionalValues = [
+    ['price', input.price],
+    ['tradeInValue', input.tradeInValue],
+    ['additionalDownPayment', input.additionalDownPayment],
+    ['financedCosts', input.financedCosts],
+  ] as const
+
+  optionalValues.forEach(([field, value]) => {
+    if (value !== undefined) {
+      validateNumber(issues, field, value)
+    }
+  })
+
+  if (input.price === undefined) {
+    if (input.manualAmount === undefined) {
+      issues.push({
+        field: 'manualAmount',
+        code: 'required',
+        message: 'manualAmount é obrigatório quando price não está disponível',
+      })
+    } else {
+      validateNumber(issues, 'manualAmount', input.manualAmount)
+    }
+  }
+
+  if (issues.length > 0) {
+    throw new FinancingValidationError(issues)
+  }
+
+  if (input.price !== undefined) {
+    const amount = assertFiniteResult(
+      'financedAmount.amount',
+      input.price
+        - (input.tradeInValue ?? 0)
+        - (input.additionalDownPayment ?? 0)
+        + (input.financedCosts ?? 0),
+    )
+    return {
+      amount: Math.max(0, amount),
+      source: 'calculated',
+    }
+  }
+
+  return {
+    amount: input.manualAmount as number,
+    source: 'manual',
+  }
 }
 
 export function calculateMonthlyEffectiveRate(rate: EffectiveRate): number {
@@ -436,6 +623,37 @@ function calculateScheduledExtraPayment(
   )
 }
 
+function calculateAppliedPeriodicCharges(
+  period: number,
+  charges: readonly PeriodicCharge[] | undefined,
+): readonly AppliedPeriodicCharge[] {
+  if (charges === undefined) {
+    return []
+  }
+
+  return charges
+    .filter((charge) => (
+      period >= charge.startPeriod
+      && (charge.endPeriod === undefined || period <= charge.endPeriod)
+      && (period - charge.startPeriod) % charge.frequencyMonths === 0
+    ))
+    .map((charge) => ({
+      description: charge.description,
+      amount: charge.amount,
+    }))
+}
+
+function isFloatingPointZero(
+  value: number,
+  ...calculationValues: readonly number[]
+): boolean {
+  const magnitude = Math.max(
+    1,
+    ...calculationValues.map((item) => Math.abs(item)),
+  )
+  return Math.abs(value) <= Number.EPSILON * magnitude * 4
+}
+
 function calculateValidatedPriceScenario(
   input: PriceFinancingScenarioInput,
 ): PriceFinancingResult {
@@ -476,32 +694,57 @@ function calculateValidatedPriceScenario(
       }])
     }
 
-    const principalAmortizedByPayment = period === input.termMonths
+    let principalAmortizedByPayment = period === input.termMonths
       ? openingBalance
       : Math.min(scheduledPrincipal, openingBalance)
+    let balanceAfterPayment = openingBalance - principalAmortizedByPayment
+    if (isFloatingPointZero(
+      balanceAfterPayment,
+      openingBalance,
+      principalAmortizedByPayment,
+    )) {
+      principalAmortizedByPayment = openingBalance
+      balanceAfterPayment = 0
+    }
     const contractualPayment = assertFiniteResult(
       `schedule.${period}.contractualPayment`,
       interest + principalAmortizedByPayment,
     )
-    const balanceAfterPayment = openingBalance - principalAmortizedByPayment
-    const requestedExtraPayment = input.strategy === 'reducePayment'
-      ? calculateScheduledExtraPayment(period, input.extraPaymentSchedule)
-      : 0
-    const principalAmortizedByExtraPayment = Math.min(
+    const requestedExtraPayment = input.strategy === 'none'
+      ? 0
+      : calculateScheduledExtraPayment(period, input.extraPaymentSchedule)
+    let principalAmortizedByExtraPayment = Math.min(
       requestedExtraPayment,
       balanceAfterPayment,
     )
+    let closingBalance = balanceAfterPayment
+      - principalAmortizedByExtraPayment
+    if (isFloatingPointZero(
+      closingBalance,
+      balanceAfterPayment,
+      principalAmortizedByExtraPayment,
+    )) {
+      principalAmortizedByExtraPayment = balanceAfterPayment
+      closingBalance = 0
+    }
     const principalAmortized = assertFiniteResult(
       `schedule.${period}.principalAmortized`,
       principalAmortizedByPayment + principalAmortizedByExtraPayment,
     )
+    const periodicCharges = calculateAppliedPeriodicCharges(
+      period,
+      input.periodicCharges,
+    )
+    const periodicChargeTotal = assertFiniteResult(
+      `schedule.${period}.periodicChargeTotal`,
+      periodicCharges.reduce((total, charge) => total + charge.amount, 0),
+    )
     const totalPayment = assertFiniteResult(
       `schedule.${period}.totalPayment`,
-      contractualPayment + principalAmortizedByExtraPayment,
+      contractualPayment
+        + principalAmortizedByExtraPayment
+        + periodicChargeTotal,
     )
-    const closingBalance = balanceAfterPayment
-      - principalAmortizedByExtraPayment
-
     schedule.push({
       period,
       openingBalance,
@@ -510,6 +753,8 @@ function calculateValidatedPriceScenario(
       principalAmortizedByPayment,
       principalAmortizedByExtraPayment,
       extraPaymentApplied: principalAmortizedByExtraPayment,
+      periodicCharges,
+      periodicChargeTotal,
       totalPayment,
       principalAmortized,
       payment: contractualPayment,
@@ -532,6 +777,10 @@ function calculateValidatedPriceScenario(
   )
   const totalExtraPayments = schedule.reduce(
     (total, entry) => total + entry.extraPaymentApplied,
+    0,
+  )
+  const totalPeriodicCharges = schedule.reduce(
+    (total, entry) => total + entry.periodicChargeTotal,
     0,
   )
   const totalDisbursed = schedule.reduce(
@@ -563,6 +812,10 @@ function calculateValidatedPriceScenario(
       'totalExtraPayments',
       totalExtraPayments,
     ),
+    totalPeriodicCharges: assertFiniteResult(
+      'totalPeriodicCharges',
+      totalPeriodicCharges,
+    ),
     totalDisbursed: assertFiniteResult('totalDisbursed', totalDisbursed),
     totalPaid: assertFiniteResult('totalPaid', totalDisbursed),
     originalTermMonths: input.termMonths,
@@ -576,4 +829,41 @@ export function calculatePriceScenario(
 ): PriceFinancingResult {
   assertValidPriceFinancingScenarioInput(input)
   return calculateValidatedPriceScenario(input)
+}
+
+function compareWithBaseline(
+  result: PriceFinancingResult,
+  baseline: PriceFinancingResult,
+): ComparedPriceScenario {
+  return {
+    ...result,
+    interestSavings: assertFiniteResult(
+      'interestSavings',
+      baseline.totalInterest - result.totalInterest,
+    ),
+    monthsSaved: baseline.effectiveTermMonths - result.effectiveTermMonths,
+  }
+}
+
+export function comparePriceStrategies(
+  input: PriceStrategyComparisonInput,
+): PriceStrategyComparison {
+  const none = calculatePriceScenario({
+    ...input,
+    strategy: 'none',
+  })
+  const reducePayment = calculatePriceScenario({
+    ...input,
+    strategy: 'reducePayment',
+  })
+  const reduceTerm = calculatePriceScenario({
+    ...input,
+    strategy: 'reduceTerm',
+  })
+
+  return {
+    none: compareWithBaseline(none, none),
+    reducePayment: compareWithBaseline(reducePayment, none),
+    reduceTerm: compareWithBaseline(reduceTerm, none),
+  }
 }
