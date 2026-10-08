@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import type { Powertrain, Vehicle } from '../domain/vehicle'
 import {
+  applyCurrentMileage,
   buildVehicleFromForm,
-  createVehicleFormState,
+  initializeVehicleForm,
   setLicensingAutomatic,
   setPropertyTaxAutomatic,
   updateVehicleValue,
@@ -12,6 +13,8 @@ import { CurrencyInput } from './CurrencyInput'
 
 interface VehicleFormProps {
   readonly initialVehicle?: Vehicle
+  readonly currentMileageKm?: number
+  readonly allowCurrentMileage?: boolean
   readonly title: string
   readonly submitLabel: string
   onCancel(): void
@@ -52,12 +55,22 @@ function Field({ label, value, suffix, placeholder, onChange }: FieldProps) {
 
 export function VehicleForm({
   initialVehicle,
+  currentMileageKm,
+  allowCurrentMileage = false,
   title,
   submitLabel,
   onCancel,
   onSubmit,
 }: VehicleFormProps) {
-  const [form, setForm] = useState(() => createVehicleFormState(initialVehicle))
+  const initialization = initializeVehicleForm(
+    initialVehicle,
+    currentMileageKm,
+    allowCurrentMileage,
+  )
+  const [form, setForm] = useState(() => initialization.form)
+  const [useCurrentMileage, setUseCurrentMileage] = useState(
+    initialization.useCurrentMileage,
+  )
   const [error, setError] = useState<string | null>(null)
   const update = <K extends keyof VehicleFormState>(
     field: K,
@@ -110,7 +123,39 @@ export function VehicleForm({
             ))}
           </select>
         </label>
-        <Field label="Quilometragem anual" suffix="km/ano" value={form.annualMileageKm} onChange={(value) => update('annualMileageKm', value)} />
+        <div className="field">
+          <span id="annual-mileage-label">Quilometragem anual</span>
+          <div className="input-with-suffix">
+            <input
+              value={form.annualMileageKm}
+              inputMode="decimal"
+              aria-labelledby="annual-mileage-label"
+              readOnly={useCurrentMileage}
+              aria-readonly={useCurrentMileage}
+              onChange={(event) => update('annualMileageKm', event.target.value)}
+            />
+            <small>km/ano</small>
+          </div>
+          {allowCurrentMileage && currentMileageKm !== undefined && (
+            <label className="check-field check-field-compact mileage-copy-control">
+              <input
+                type="checkbox"
+                checked={useCurrentMileage}
+                onChange={(event) => {
+                  const checked = event.target.checked
+                  setUseCurrentMileage(checked)
+                  if (checked) {
+                    setForm((current) => applyCurrentMileage(
+                      current,
+                      currentMileageKm,
+                    ))
+                  }
+                }}
+              />
+              <span>Usar quilometragem do veículo atual</span>
+            </label>
+          )}
+        </div>
         <CurrencyInput label="Valor do veículo" value={form.vehicleValue} onChange={(value) => setForm((current) => updateVehicleValue(current, value))} />
         <Field label="Depreciação anual" suffix="%" value={form.annualDepreciationPercent} onChange={(value) => update('annualDepreciationPercent', value)} />
       </div>

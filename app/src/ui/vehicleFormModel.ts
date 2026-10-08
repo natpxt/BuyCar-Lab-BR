@@ -34,6 +34,11 @@ export interface VehicleFormState {
   readonly combustionSharePercent: string
 }
 
+export interface VehicleFormInitialization {
+  readonly form: VehicleFormState
+  readonly useCurrentMileage: boolean
+}
+
 export const SP_PASSENGER_CAR_PROPERTY_TAX_RATE = 0.04
 export const SP_LICENSE_FEE_2026 = 174.08
 const monetaryTolerance = 0.01
@@ -143,6 +148,40 @@ export function createVehicleFormState(vehicle?: Vehicle): VehicleFormState {
     combustionSharePercent: vehicle?.powertrain === 'PHEV'
       ? decimalToPercentageInput(vehicle.combustionShare)
       : '50',
+  }
+}
+
+export function initializeVehicleForm(
+  vehicle: Vehicle | undefined,
+  currentMileageKm: number | undefined,
+  allowCurrentMileage: boolean,
+): VehicleFormInitialization {
+  const form = createVehicleFormState(vehicle)
+  const hasReference = allowCurrentMileage
+    && currentMileageKm !== undefined
+    && Number.isFinite(currentMileageKm)
+    && currentMileageKm > 0
+  const useCurrentMileage = hasReference
+    && (vehicle === undefined || vehicle.annualMileageKm === currentMileageKm)
+
+  return {
+    form: useCurrentMileage
+      ? { ...form, annualMileageKm: numberToInput(currentMileageKm) }
+      : form,
+    useCurrentMileage,
+  }
+}
+
+export function applyCurrentMileage(
+  form: VehicleFormState,
+  currentMileageKm: number,
+): VehicleFormState {
+  if (!Number.isFinite(currentMileageKm) || currentMileageKm <= 0) {
+    return form
+  }
+  return {
+    ...form,
+    annualMileageKm: numberToInput(currentMileageKm),
   }
 }
 

@@ -262,6 +262,22 @@ A agenda deve ser independente da estratégia de amortização:
 
 Todo aporte deve ser limitado ao principal elegível. Excedentes devem ser rejeitados ou devolvidos explicitamente, nunca absorvidos como custo.
 
+### 4.5.1 Consolidação operacional da v1
+
+A v1 mantém um veículo atual e múltiplas opções de troca. Comparação e Ciladômetro podem analisar até duas opções simultaneamente, mas cada cálculo permanece independente e sempre usa o veículo atual como referência. A área Financiamento continua associada a uma única opção por vez.
+
+Os cards de veículos exibem como custo mensal o **TCO de caixa anual dividido por 12**. Valor de mercado e quilometragem são premissas separadas; copiar a quilometragem do veículo atual para uma opção apenas preenche o valor da entrada e não cria vínculo financeiro ou persistente.
+
+O Ciladômetro usa o cronograma real de cada cenário. Para cada período ativo:
+
+```text
+impacto líquido do período = pagamento total do período - economia operacional mensal
+```
+
+O pagamento total do período já contém prestação contratual, aporte efetivamente aplicado e cobranças periódicas aplicáveis. Portanto, esses componentes não são somados novamente no Ciladômetro. Aportes únicos afetam somente sua ocorrência; aportes recorrentes e cobranças respeitam suas agendas. Para cada opção, a estratégia recomendada minimiza a soma desses impactos no prazo contratual original e empates são preservados. Na comparação entre duas opções, o horizonte comum é o maior prazo contratual original; depois da quitação, o pagamento financeiro é zero e o impacto mensal continua sendo o oposto da economia operacional mensal. A média divide o impacto acumulado por esse mesmo horizonte.
+
+IPVA de 4% do valor do veículo para carro de passeio em São Paulo e licenciamento SP 2026 de R$ 174,08 são defaults editáveis de produto. Eles não substituem a obrigação de o usuário conferir exceções legais, fiscais ou valores de outros exercícios. Valores existentes e overrides manuais são preservados.
+
 ### 4.6 Taxas efetivas, precisão e arredondamento
 
 `monthly` e `annual` representam taxas efetivas da respectiva periodicidade. Internamente, as taxas são expressas em forma decimal.

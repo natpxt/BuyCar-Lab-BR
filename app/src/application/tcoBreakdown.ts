@@ -32,6 +32,14 @@ export interface ComparedTcoBreakdownRow {
   }
 }
 
+export interface MultiOptionTcoBreakdown {
+  readonly current: TcoBreakdown
+  readonly options: readonly {
+    readonly vehicle: Vehicle
+    readonly rows: readonly ComparedTcoBreakdownRow[]
+  }[]
+}
+
 export const tcoBreakdownOrder: readonly TcoBreakdownComponent[] = [
   'fuel',
   'electricity',
@@ -79,4 +87,17 @@ export function compareTcoBreakdowns(
       monthly: current[component].monthly - option[component].monthly,
     },
   }))
+}
+
+export function compareMultipleTcoBreakdowns(
+  currentVehicle: Vehicle,
+  optionVehicles: readonly Vehicle[],
+): MultiOptionTcoBreakdown {
+  return {
+    current: calculateTcoBreakdown(currentVehicle),
+    options: optionVehicles.map((vehicle) => ({
+      vehicle,
+      rows: compareTcoBreakdowns(currentVehicle, vehicle),
+    })),
+  }
 }

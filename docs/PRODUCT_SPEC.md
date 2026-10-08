@@ -1,8 +1,8 @@
-# Especificação do produto — MVP
+# Especificação do produto — v1
 
 ## 1. Objetivo e proposta de valor
 
-O Comparador de Carros é um aplicativo pessoal, local e em português do Brasil para apoiar a decisão de manter ou trocar um veículo. O produto reúne, em um fluxo único, o cadastro dos veículos, a comparação de custo total de propriedade e a simulação do financiamento do candidato escolhido.
+O BuyCar Lab - BR é um aplicativo pessoal, local e em português do Brasil para apoiar a decisão de manter ou trocar um veículo. O produto reúne, em um fluxo único, o cadastro dos veículos, a comparação de custo total de propriedade, a simulação do financiamento da opção escolhida e o Ciladômetro.
 
 O MVP deve responder com clareza:
 
@@ -11,7 +11,7 @@ O MVP deve responder com clareza:
 - como a compra financiada afeta o caixa mensal;
 - quanto aportes extraordinários alteram prestação, prazo, juros e saldo devedor.
 
-A experiência não deve reproduzir a estrutura de abas da planilha. Os dados serão organizados pelas tarefas do usuário: **Veículos**, **Comparação** e **Financiamento**.
+A experiência não reproduz a estrutura de abas da planilha. Os dados são organizados pelas tarefas do usuário: **Veículos**, **Comparação**, **Financiamento** e **Ciladômetro**.
 
 ### 1.1 Fontes de autoridade
 
@@ -33,21 +33,21 @@ O usuário é o proprietário de um veículo que deseja avaliar uma possível tr
 
 1. Cadastrar o veículo atual.
 2. Informar custos, quilometragem e dados da motorização.
-3. Cadastrar ao menos um candidato.
-4. Abrir a comparação entre o atual e o candidato.
+3. Cadastrar ao menos uma opção de troca.
+4. Abrir a comparação entre o atual e uma ou duas opções.
 
 #### Comparar uma troca
 
-1. Selecionar um candidato salvo.
+1. Selecionar uma ou duas opções salvas.
 2. Conferir premissas e eventuais dados ausentes.
 3. Comparar TCO de caixa e TCO econômico.
 4. Ver economia ou custo adicional mensal, anual e por quilômetro.
-5. Escolher o candidato para simular a compra.
+5. Escolher uma opção para simular a compra.
 
 #### Simular financiamento
 
 1. Conferir preço, valor de troca, entrada e custos financiados.
-2. Informar contrato PRICE, taxa, periodicidade, prazo, data inicial, correção e cobranças periódicas.
+2. Informar contrato PRICE, taxa efetiva, periodicidade, prazo e cobranças periódicas.
 3. Calcular o cenário sem amortização extraordinária.
 4. Criar aportes únicos ou recorrentes.
 5. Comparar o cenário-base com `reducePayment` ou `reduceTerm`.
@@ -67,7 +67,7 @@ A economia operacional mensal segue a orientação do modelo:
 
 ```text
 TCO de caixa mensal do veículo atual
-- TCO de caixa mensal do candidato
+- TCO de caixa mensal da opção de troca
 ```
 
 Valor positivo significa economia. Valor negativo significa custo operacional adicional.
@@ -76,7 +76,7 @@ Quando houver financiamento, o impacto mensal da troca deve ser mostrado separad
 
 ```text
 pagamento financeiro do período
-+ TCO de caixa mensal do candidato
++ TCO de caixa mensal da opção de troca
 - TCO de caixa mensal do veículo atual
 ```
 
@@ -84,25 +84,27 @@ Valor positivo representa saída adicional de caixa; valor negativo representa e
 
 ## 4. Estrutura de navegação
 
-A navegação principal terá três áreas em sequência lógica:
+A navegação principal tem quatro áreas em sequência lógica:
 
 1. **Veículos**
 2. **Comparação**
 3. **Financiamento**
+4. **Ciladômetro**
 
-O usuário poderá retornar às etapas anteriores sem perder dados. A seleção de um candidato na comparação será reutilizada ao abrir o financiamento. Não haverá navegação baseada nas abas ou nos nomes `_EV` da planilha.
+O usuário pode retornar às etapas anteriores sem perder dados. Comparação e Ciladômetro aceitam até duas opções contra o veículo atual. O Financiamento permanece unitário e reutiliza sua seleção persistida. Não há navegação baseada nas abas ou nos nomes `_EV` da planilha.
 
 ## 5. Área Veículos
 
 ### 5.1 Responsabilidades
 
 - manter exatamente um veículo atual;
-- cadastrar, editar, duplicar e excluir candidatos;
+- cadastrar, editar, duplicar e excluir opções de troca;
 - indicar claramente a motorização;
 - mostrar se há dados suficientes para calcular TCO de caixa e econômico;
-- permitir selecionar um candidato para comparação.
+- permitir copiar a quilometragem do veículo atual ao cadastrar uma opção, persistindo apenas o número copiado;
+- mostrar quilometragem anual, TCO de caixa mensal e valor de mercado nos cards.
 
-A exclusão do veículo atual exige confirmação e invalida comparações existentes. A exclusão de um candidato exige confirmação e remove sua simulação de financiamento associada.
+A exclusão de uma opção exige confirmação, limpa referências inválidas e remove sua simulação de financiamento associada.
 
 ### 5.2 Campos comuns
 
@@ -112,7 +114,7 @@ A exclusão do veículo atual exige confirmação e invalida comparações exist
 | Uso | Quilometragem anual | Deve ser maior que zero para resultados por km. |
 | Valor | Preço ou valor atual, taxa anual de depreciação | Necessários para o TCO econômico pela regra simples vigente. |
 | Propriedade | Seguro, IPVA, licenciamento e manutenção anuais | Valores não negativos, sempre identificados como anuais. |
-| Compra do candidato | Preço de aquisição e valor líquido esperado da troca | Alimentam o financiamento, sem integrar automaticamente o TCO operacional. |
+| Compra da opção | Preço de aquisição e valor líquido esperado da troca | Alimentam o financiamento, sem integrar automaticamente o TCO operacional. |
 
 Os valores atuais do Tiida não serão usados como padrões de formulário.
 
@@ -147,7 +149,7 @@ Os percentuais de uso elétrico e a combustão devem somar 100% da quilometragem
 ### 5.4 Estados
 
 - **Sem veículo atual:** explicar que ele é necessário como referência e oferecer a ação “Cadastrar veículo atual”.
-- **Sem candidatos:** oferecer “Adicionar candidato”.
+- **Sem opções de troca:** oferecer “Adicionar opção”.
 - **Cadastro incompleto:** salvar o rascunho, identificar os campos pendentes e bloquear apenas os resultados que dependem deles.
 - **Valor inválido:** associar a mensagem ao campo e preservar os dados já preenchidos.
 
@@ -155,7 +157,7 @@ Os percentuais de uso elétrico e a combustão devem somar 100% da quilometragem
 
 ### 6.1 Responsabilidades
 
-A tela compara o veículo atual com um candidato selecionado. Comparação entre dois candidatos fica fora do MVP.
+A tela compara o veículo atual com uma ou duas opções selecionadas. Cada resultado mantém o veículo atual como referência; não existe fórmula principal de opção contra opção.
 
 Deve apresentar lado a lado:
 
@@ -166,30 +168,30 @@ Deve apresentar lado a lado:
 - TCO de caixa mensal, anual e por km;
 - TCO econômico mensal, anual e por km;
 - diferença absoluta e percentual;
-- economia ou custo adicional do candidato.
+- economia ou custo adicional de cada opção.
 
 O MVP usa uma visão anual normalizada do TCO. Os valores mensais derivam do total anual dividido por 12, e os valores por quilômetro usam o total anual dividido pela quilometragem anual declarada. Se a quilometragem estiver ausente ou for inválida, o resultado por km não será exibido e haverá uma mensagem específica. Análises por horizonte de posse permanecem pós-MVP.
 
 ### 6.2 Leitura dos resultados
 
 - Verde, ícones ou texto podem reforçar economia, mas a informação não pode depender somente de cor.
-- A direção do cálculo deve aparecer junto ao resultado: “veículo atual menos candidato”.
+- A direção do cálculo deve aparecer junto ao resultado: “veículo atual menos opção de troca”.
 - TCO de caixa e econômico nunca serão combinados em um único número.
 - O custo de aquisição e o financiamento não alterarão os cartões de TCO.
 - Após existir uma simulação, a tela poderá mostrar um resumo separado do impacto de caixa da troca e oferecer “Ver financiamento”.
 
 ### 6.3 Ações
 
-- trocar o candidato comparado;
+- trocar as opções comparadas, respeitando o limite de duas;
 - editar qualquer um dos dois veículos;
-- selecionar o candidato para financiamento;
+- selecionar uma opção para financiamento;
 - retornar à lista de veículos.
 
 ## 7. Área Financiamento
 
-### 7.1 Relação com o candidato
+### 7.1 Relação com a opção de troca
 
-A simulação pertence ao candidato selecionado e utiliza seus dados de compra. A alteração de preço, troca ou entrada deve marcar os resultados anteriores como desatualizados até novo cálculo. O financiamento não altera o TCO operacional do veículo.
+A simulação pertence à única opção selecionada na área Financiamento e utiliza seus dados de compra. A alteração de preço, troca ou entrada recalcula os resultados. O financiamento não altera o TCO operacional do veículo.
 
 ### 7.2 Valor financiado
 
@@ -230,15 +232,7 @@ monthlyRate = (1 + annualRate)^(1/12) - 1
 
 A taxa mensal convertida não sofre arredondamento intermediário antes de alimentar o cronograma PRICE. Taxas nominais anuais e CET permanecem fora desta convenção e exigem tratamento próprio no modelo financeiro.
 
-Outras entradas contratuais:
-
-- data ou competência inicial;
-- prazo original em meses;
-- correção monetária, quando houver, conforme a ordem de cálculo documentada;
-- custos incorporados ao principal;
-- seguros e taxas periódicos.
-
-O MVP não consultará automaticamente TR, IPCA ou outros índices. Qualquer correção suportada dependerá de valor explicitamente informado e de regra aprovada no modelo financeiro.
+Outras entradas contratuais são prazo original em meses, custos incorporados ao principal e cobranças periódicas. A correção monetária permanece neutra, em zero, na v1. O aplicativo não consulta TR, IPCA ou outros índices; qualquer suporte futuro depende de regra aprovada no modelo financeiro.
 
 ### 7.5 Custos financiados e cobranças periódicas
 
@@ -296,10 +290,11 @@ Esse comportamento de reserva é um requisito aprovado do produto. Ele não foi 
 
 ## 9. Comparação de estratégias
 
-A comparação terá sempre dois cenários produzidos a partir do mesmo contrato:
+A comparação do Laboratório produz três cenários a partir do mesmo contrato:
 
 1. **Sem amortização:** `none`, sem aplicar a agenda de aportes.
-2. **Com amortização:** mesma agenda aplicada com `reducePayment` ou `reduceTerm`.
+2. **Reduzir parcela:** mesma agenda aplicada com `reducePayment`.
+3. **Reduzir prazo:** mesma agenda aplicada com `reduceTerm`.
 
 A comparação deve mostrar para ambos:
 
@@ -313,7 +308,7 @@ A comparação deve mostrar para ambos:
 - meses antecipados;
 - evolução mensal do saldo devedor.
 
-Para o baseline, economia de juros e meses antecipados são zero. A troca entre `reducePayment` e `reduceTerm` recalcula apenas o cenário com amortização; o baseline permanece idêntico.
+Para o baseline, economia de juros e meses antecipados são zero. Os três cenários são calculados de forma independente e o baseline permanece idêntico.
 
 ## 10. Cronograma e composição financeira
 
@@ -327,9 +322,8 @@ A última amortização é limitada ao principal remanescente e deve encerrar o 
 
 Cada período apresentará, quando aplicável:
 
-- número e data do período;
+- número do período;
 - saldo inicial;
-- correção monetária;
 - juros;
 - principal amortizado pela prestação;
 - prestação contratual;
@@ -359,24 +353,36 @@ O total pago e sua composição devem fechar matematicamente com base nos valore
 
 ### 10.2 Visualização
 
-A evolução mensal terá:
+A evolução do financiamento possui:
 
-- resumo numérico dos dois cenários;
+- comparação simultânea de `none`, `reducePayment` e `reduceTerm`;
 - representação visual do saldo ao longo do tempo;
-- tabela completa do cronograma;
-- indicação clara do mês e da data de quitação.
+- gráficos de saldo, composição do pagamento e prestação;
+- tabela mensal ou anual com filtros;
+- exportação CSV da visão e do filtro ativos;
+- indicação clara do período de quitação.
 
-A especificação não determina biblioteca, tipo definitivo de gráfico ou estilo visual.
+### 10.3 Ciladômetro e fluxo de caixa real
+
+O Ciladômetro analisa uma ou duas opções, sempre contra o veículo atual. Para cada opção, calcula as três estratégias existentes e recomenda objetivamente a de menor impacto acumulado no prazo contratual original, preservando empates. O impacto de cada período usa o cronograma real:
+
+```text
+impacto líquido do período = period.totalPayment - economia operacional mensal
+```
+
+`period.totalPayment` já inclui a prestação, o aporte efetivamente aplicado e as cobranças daquele período. Após a quitação, o pagamento financeiro é zero e a diferença operacional continua no horizonte. Ao comparar duas opções, ambas usam o maior prazo contratual original como horizonte comum. A tela apresenta as métricas correspondentes lado a lado; uma opção sem financiamento continua exibindo seu TCO, não bloqueia a outra e não participa de uma classificação financeira incompleta.
 
 ## 11. Persistência local
 
 - Os dados serão salvos automaticamente no dispositivo e perfil de navegador atuais.
 - Não haverá conta, sincronização, backend ou envio para serviços externos.
-- Devem persistir veículo atual, candidatos, candidato selecionado, formulários em andamento e simulações associadas.
+- Persistem veículo atual, opções de troca, seleções unitárias compatíveis e entradas das simulações associadas.
+- A segunda seleção de Comparação e Ciladômetro é uma preferência local da tela e não altera o schema da v0.9.0.
+- Cronogramas, TCOs e métricas do Ciladômetro são recalculados e não são persistidos como autoridade.
 - O usuário terá uma ação explícita para apagar todos os dados locais, acompanhada de confirmação e explicação de irreversibilidade.
 - Falhas de leitura ou gravação local devem gerar mensagem compreensível sem apagar silenciosamente os dados em memória.
 
-Exportação, importação e sincronização ficam fora do MVP.
+O Laboratório exporta sua tabela ativa em CSV no navegador. Importação e sincronização ficam fora da v1.
 
 ## 12. Validações, erros e estados vazios
 
@@ -392,7 +398,7 @@ Exportação, importação e sincronização ficam fora do MVP.
 
 ### 12.2 Estados da simulação
 
-- **Sem candidato selecionado:** orientar o retorno à comparação.
+- **Sem opção selecionada:** orientar o cadastro ou a seleção de uma opção.
 - **Financiamento incompleto:** listar os campos necessários e não exibir resultados antigos como atuais.
 - **Sem aportes:** permitir calcular `none` e explicar como adicionar uma agenda.
 - **Aporte posterior à quitação:** informar que a ocorrência não foi aplicada.
@@ -414,34 +420,41 @@ Exportação, importação e sincronização ficam fora do MVP.
 
 ## 14. Escopo
 
-### 14.1 MVP
+### 14.1 v1
 
-- um veículo atual e múltiplos candidatos;
+- um veículo atual e múltiplas opções de troca;
 - ICE, HEV, PHEV e BEV;
-- comparação do atual com um candidato;
+- cards com quilometragem anual, TCO de caixa mensal e valor de mercado;
+- cópia opcional da quilometragem atual ao cadastrar uma opção;
+- comparação do atual com uma ou duas opções simultaneamente;
 - TCO de caixa e econômico em visão anual normalizada, apresentados por mês, por ano e por km;
+- detalhamento dos componentes do TCO;
 - economia ou custo adicional da troca;
 - financiamento PRICE;
 - taxa efetiva mensal ou anual, com conversão anual equivalente definida pelo modelo financeiro;
 - custos incorporados ao principal e cobranças periódicas separadas;
 - aportes únicos, recorrentes e substituições manuais por período;
 - `none`, `reducePayment` e `reduceTerm`;
-- comparação baseline versus cenário com amortização;
+- comparação simultânea das três estratégias;
+- Laboratório com gráficos, tabela mensal/anual, filtros e CSV;
+- Ciladômetro de uma ou duas opções baseado no fluxo real do cronograma;
 - cronograma e evolução até a quitação;
 - persistência local.
 
-### 14.2 Pós-MVP
+### 14.2 Pós-v1
 
 - sistema SAC;
-- comparação entre dois candidatos;
-- múltiplos contratos ou cenários salvos para o mesmo candidato;
-- importação e exportação de dados;
+- `prepayTailInstallments` e sua reserva após definição contratual completa;
+- múltiplos planos recorrentes independentes;
+- múltiplos contratos ou cenários salvos para a mesma opção;
+- importação de dados;
 - histórico detalhado de abastecimentos e serviços;
 - TCO por período de posse;
 - divisão de uso do PHEV por dias, viagens ou energia medida;
 - curvas de depreciação e valor residual informado;
 - inflação e valor do dinheiro no tempo;
-- `prepayTailInstallments`, incluindo sua reserva, após definição contratual completa e decisão sobre eventual saldo remanescente na quitação.
+- hospedagem gratuita e PWA;
+- login, Supabase e sincronização entre dispositivos.
 
 ### 14.3 Fora de escopo
 
@@ -476,12 +489,12 @@ Até essas definições serem aprovadas, a interface deve sinalizar a limitaçã
 
 ## 16. Critérios de aceite do MVP
 
-1. O usuário cadastra e edita o veículo atual e candidatos das quatro motorizações.
+1. O usuário cadastra e edita o veículo atual e opções das quatro motorizações; pode copiar a quilometragem atual sem criar vínculo persistente.
 2. O PHEV divide a quilometragem anual por percentuais entre eletricidade e combustão, totalizando 100% e sem dupla contagem.
-3. A comparação usa TCO anual normalizado e apresenta TCO de caixa e econômico separadamente por mês, por ano e por km.
+3. A comparação aceita uma ou duas opções contra o veículo atual e apresenta TCO de caixa e econômico separadamente por mês, por ano e por km.
 4. A depreciação anual do MVP é calculada como `valor do veículo × taxa anual de depreciação`.
 5. Economia e custo adicional usam direção e rótulos inequívocos.
-6. A seleção do candidato alimenta o financiamento sem alterar o TCO operacional.
+6. O Financiamento continua unitário e sua seleção não altera o TCO operacional.
 7. O valor financiado calculado tem precedência; o manual funciona somente como fallback quando o preço não estiver preenchido.
 8. O sistema contratual é PRICE e aparece separado da estratégia extraordinária.
 9. A interface identifica a taxa como efetiva mensal ou anual; a mensal é usada diretamente e a anual é convertida por `monthlyRate = (1 + annualRate)^(1/12) - 1` sem arredondamento intermediário.
@@ -495,7 +508,7 @@ Até essas definições serem aprovadas, a interface deve sinalizar a limitaçã
 17. Um aporte recorrente respeita início, fim opcional e frequência.
 18. `reducePayment` mantém o prazo e reduz a prestação; `reduceTerm` mantém a prestação de referência e reduz o prazo.
 19. `prepayTailInstallments` permanece separado e indisponível no MVP sem dados contratuais suficientes.
-20. A comparação mostra `none` contra uma estratégia com a mesma base contratual.
+20. O Laboratório compara `none`, `reducePayment` e `reduceTerm` com a mesma base contratual.
 21. Os resultados incluem valor financiado, prestação inicial, juros, fluxo total, prazos, economia, meses antecipados e saldo mensal.
 22. O fluxo total soma prestações, aportes e cobranças periódicas sem contar aportes duas vezes na composição.
 23. Principal, juros, correção e encargos aparecem discriminados.
@@ -503,3 +516,5 @@ Até essas definições serem aprovadas, a interface deve sinalizar a limitaçã
 25. Os dados permanecem após recarregar o aplicativo e podem ser apagados por ação confirmada.
 26. Os cálculos PRICE aplicáveis reconciliam os golden cases de `FINANCIAL_MODEL.md` com as tolerâncias documentadas.
 27. Nenhuma tela classifica principal amortizado como custo econômico.
+28. O Ciladômetro usa `period.totalPayment - economia operacional mensal` para cada período e não ignora aportes ou cobranças aplicados.
+29. Uma opção sem financiamento não bloqueia a análise de outra opção financiada.

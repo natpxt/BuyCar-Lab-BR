@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyCurrentMileage,
   buildVehicleFromForm,
   createVehicleFormState,
+  initializeVehicleForm,
   setLicensingAutomatic,
   setPropertyTaxAutomatic,
   SP_LICENSE_FEE_2026,
@@ -265,5 +267,41 @@ describe('formulário de veículo', () => {
     const withDefaults = setLicensingAutomatic(withTax, true)
     expect(withDefaults.propertyTax).toBe('4000')
     expect(withDefaults.licensing).toBe('174,08')
+  })
+
+  it('inicializa nova opção com a quilometragem do veículo atual', () => {
+    const initialized = initializeVehicleForm(undefined, 19_671, true)
+    expect(initialized.useCurrentMileage).toBe(true)
+    expect(initialized.form.annualMileageKm).toBe('19671')
+  })
+
+  it('permite manter uma quilometragem diferente ao desmarcar a cópia', () => {
+    const initialized = initializeVehicleForm(undefined, 19_671, true)
+    const edited = { ...base, annualMileageKm: '12.000' }
+    expect(initialized.useCurrentMileage).toBe(true)
+    expect(buildVehicleFromForm(edited).annualMileageKm).toBe(12_000)
+  })
+
+  it('preserva quilometragem diferente de opção existente', () => {
+    const vehicle = buildVehicleFromForm({
+      ...base,
+      annualMileageKm: '15.000',
+    })
+    const initialized = initializeVehicleForm(vehicle, 19_671, true)
+    expect(initialized.useCurrentMileage).toBe(false)
+    expect(initialized.form.annualMileageKm).toBe('15000')
+  })
+
+  it('não depende de veículo atual para abrir o formulário', () => {
+    const initialized = initializeVehicleForm(undefined, undefined, true)
+    expect(initialized.useCurrentMileage).toBe(false)
+    expect(initialized.form.annualMileageKm).toBe('')
+  })
+
+  it('copia a referência sem modificar outros campos do formulário', () => {
+    const form = { ...base, annualMileageKm: '10.000' }
+    const updated = applyCurrentMileage(form, 20_000)
+    expect(updated.annualMileageKm).toBe('20000')
+    expect(updated.name).toBe(form.name)
   })
 })

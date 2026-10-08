@@ -8,6 +8,7 @@ import {
   type StoredVehicle,
 } from '../application/appState'
 import { useAppState } from '../application/AppStateProvider'
+import { calculateVehicleCardSummary } from '../application/vehicleSummary'
 import type { Vehicle } from '../domain/vehicle'
 import { formatCurrency, formatNumber } from './format'
 import { VehicleForm } from './VehicleForm'
@@ -21,6 +22,17 @@ const powertrainLabel = {
   HEV: 'Híbrido',
   PHEV: 'Híbrido plug-in',
   BEV: 'Elétrico',
+}
+
+function VehicleMetrics({ vehicle }: { readonly vehicle: Vehicle }) {
+  const summary = calculateVehicleCardSummary(vehicle)
+  return (
+    <dl className="vehicle-card-metrics">
+      <div><dt>Quilometragem anual</dt><dd>{formatNumber(summary.annualMileageKm)} km/ano</dd></div>
+      <div><dt>Custo mensal</dt><dd>{formatCurrency(summary.monthlyCashTco)}</dd></div>
+      <div><dt>Valor de mercado</dt><dd>{formatCurrency(summary.marketValue)}</dd></div>
+    </dl>
+  )
 }
 
 function newId(): string {
@@ -51,6 +63,8 @@ export function VehiclesScreen() {
     return (
       <VehicleForm
         initialVehicle={editor.record?.vehicle}
+        currentMileageKm={state.currentVehicle?.vehicle.annualMileageKm}
+        allowCurrentMileage={editor.kind === 'candidate'}
         title={editor.record
           ? `Editar ${current ? 'veículo atual' : 'opção de troca'}`
           : `Cadastrar ${current ? 'veículo atual' : 'opção de troca'}`}
@@ -86,7 +100,7 @@ export function VehiclesScreen() {
             <div>
               <span className="tag">{powertrainLabel[state.currentVehicle.vehicle.powertrain]}</span>
               <h3>{state.currentVehicle.vehicle.name}</h3>
-              <p>{formatNumber(state.currentVehicle.vehicle.annualMileageKm)} km/ano · {formatCurrency(state.currentVehicle.vehicle.vehicleValue)}</p>
+              <VehicleMetrics vehicle={state.currentVehicle.vehicle} />
             </div>
             <button className="button button-secondary" onClick={() => setEditor({ kind: 'current', record: state.currentVehicle ?? undefined })}>
               Editar veículo atual
@@ -123,8 +137,7 @@ export function VehiclesScreen() {
                 <div>
                   <span className="tag">{powertrainLabel[candidate.vehicle.powertrain]}</span>
                   <h3>{candidate.vehicle.name}</h3>
-                  <p>{formatNumber(candidate.vehicle.annualMileageKm)} km/ano</p>
-                  <strong>{formatCurrency(candidate.vehicle.vehicleValue)}</strong>
+                  <VehicleMetrics vehicle={candidate.vehicle} />
                 </div>
                 <div className="card-actions">
                   <button className="button button-small button-secondary" onClick={() => setEditor({ kind: 'candidate', record: candidate })}>Editar</button>

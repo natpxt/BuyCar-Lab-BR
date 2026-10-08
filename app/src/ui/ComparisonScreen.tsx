@@ -1,9 +1,14 @@
+import { useEffect, useMemo, useState } from 'react'
 import {
-  calculateSelectedVehicleComparison,
   selectComparisonCandidate,
   type IntegratedVehicleComparison,
 } from '../application/appState'
 import { useAppState } from '../application/AppStateProvider'
+import {
+  calculateOptionComparisons,
+  initializeOptionSelection,
+  reconcileOptionSelection,
+} from '../application/multiVehicleSelection'
 import type { TcoResult } from '../domain/tco'
 import {
   formatCostPerKm,
@@ -11,6 +16,7 @@ import {
   formatOperationalHeadline,
   formatPercentageValue,
 } from './format'
+import { OptionMultiSelect } from './OptionMultiSelect'
 import { TcoBreakdownTable } from './TcoBreakdownTable'
 
 interface TcoPanelProps {
@@ -58,14 +64,44 @@ function ComparisonSummary({ result }: { readonly result: IntegratedVehicleCompa
         <div><span>Diferença por km</span><strong>{formatCostPerKm(Math.abs(result.operationalSavings.perKm))}</strong></div>
         <div><span>Diferença percentual de caixa</span><strong>{formatPercentageValue(result.cashDifference.percentage.annual)}</strong></div>
       </div>
-      <p>A direção do cálculo é veículo atual menos opção de troca. Valores positivos indicam economia com {result.candidate.vehicle.name}.</p>
     </section>
+  )
+}
+
+function ConsolidatedDifferences({ result }: {
+  readonly result: IntegratedVehicleComparison
+}) {
+  return (
+    <article className="data-card">
+      <h3>{result.candidate.vehicle.name}</h3>
+      <div className="insight-metrics">
+        <div><span>Diferença absoluta de caixa</span><strong>{formatCurrency(result.cashDifference.absolute.annual)}/ano</strong></div>
+        <div><span>Diferença percentual de caixa</span><strong>{formatPercentageValue(result.cashDifference.percentage.annual)}</strong></div>
+        <div><span>Diferença econômica absoluta</span><strong>{formatCurrency(result.economicDifference.absolute.annual)}/ano</strong></div>
+        <div><span>Diferença econômica percentual</span><strong>{formatPercentageValue(result.economicDifference.percentage.annual)}</strong></div>
+      </div>
+    </article>
   )
 }
 
 export function ComparisonScreen() {
   const { state, updateState } = useAppState()
-  const selected = state.selectedComparisonCandidateId ?? ''
+  const availableIds = useMemo(
+    () => state.candidates.map((candidate) => candidate.id),
+    [state.candidates],
+  )
+  const [selectedIds, setSelectedIds] = useState<readonly string[]>(() => (
+    initializeOptionSelection(availableIds, state.selectedComparisonCandidateId)
+  ))
+  const [selectionError, setSelectionError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setSelectedIds((current) => reconcileOptionSelection(
+      current,
+      availableIds,
+      state.selectedComparisonCandidateId,
+    ))
+  }, [availableIds, state.selectedComparisonCandidateId])
 
   if (state.currentVehicle === null) {
     return <div className="empty-state page-empty"><h2>Cadastre o veículo atual</h2><p>O veículo atual é a referência necessária para calcular as diferenças de TCO.</p></div>
@@ -74,15 +110,16 @@ export function ComparisonScreen() {
     return <div className="empty-state page-empty"><h2>Adicione uma opção de troca</h2><p>Cadastre ao menos uma opção de troca para iniciar a comparação.</p></div>
   }
 
-  let result: IntegratedVehicleComparison | null = null
-  let error: string | null = null
-  if (selected) {
-    try {
-      result = calculateSelectedVehicleComparison(state)
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : 'Não foi possível comparar os veículos'
-    }
+  let results: readonly IntegratedVehicleComparison[] = []
+  let calculationError: string | null = null
+  try {
+    results = calculateOptionComparisons(state, selectedIds)
+  } catch (cause) {
+    calculationError = cause instanceof Error
+      ? cause.message
+      : 'Não foi possível comparar os veículos'
   }
+  const currentResult = results[0]
 
   return (
     <div className="screen-stack">
@@ -90,37 +127,64 @@ export function ComparisonScreen() {
         <div>
           <span className="eyebrow">Decisão orientada por custos</span>
           <h1>Comparação</h1>
-          <p>Compare o TCO anual normalizado do veículo atual com uma opção de troca.</p>
+          <p>Compare uma ou duas opções com o TCO anual normalizado do veículo atual.</p>
         </div>
-        <label className="field select-candidate">
-          <span>Veículo comparado</span>
-          <select value={selected} onChange={(event) => updateState((current) => selectComparisonCandidate(current, event.target.value || null))}>
-            <option value="">Selecione um veículo</option>
-            {state.candidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.vehicle.name}</option>)}
-          </select>
-        </label>
+        <OptionMultiSelect
+          label="Veículos comparados"
+          candidates={state.candidates}
+          selectedIds={selectedIds}
+          error={selectionError}
+          onError={setSelectionError}
+          onChange={(next) => {
+            if (next.length === 0) {
+              setSelectionError('Selecione ao menos uma opção de troca.')
+              return
+            }
+            setSelectedIds(next)
+            updateState((current) => selectComparisonCandidate(current, next[0]))
+          }}
+        />
       </header>
 
-      {!selected && <div className="empty-state"><h2>Selecione um veículo comparado</h2><p>Escolha um veículo acima para visualizar o comparativo completo.</p></div>}
-      {error && <div className="alert alert-error">{error}</div>}
-      {result && (
+      {calculationError && <div className="alert alert-error">{calculationError}</div>}
+      {results.length > 0 && (
         <>
-          <ComparisonSummary result={result} />
-          <div className="comparison-grid">
-            <TcoPanel label="Veículo atual" name={result.current.vehicle.name} tco={result.currentTco} emphasized={result.currentTco.cashTco.monthly <= result.candidateTco.cashTco.monthly} />
-            <TcoPanel label="Opção de troca" name={result.candidate.vehicle.name} tco={result.candidateTco} emphasized={result.candidateTco.cashTco.monthly < result.currentTco.cashTco.monthly} />
+          <div className={`multi-result-grid ${results.length === 1 ? 'multi-result-grid-single' : ''}`}>
+            {results.map((result) => (
+              <ComparisonSummary key={result.candidate.id} result={result} />
+            ))}
           </div>
+          {currentResult && (
+            <div className={`comparison-grid ${results.length === 2 ? 'comparison-grid-three' : ''}`}>
+              <TcoPanel
+                label="Veículo atual"
+                name={currentResult.current.vehicle.name}
+                tco={currentResult.currentTco}
+                emphasized={results.every((result) => (
+                  currentResult.currentTco.cashTco.monthly <= result.candidateTco.cashTco.monthly
+                ))}
+              />
+              {results.map((result) => (
+                <TcoPanel
+                  key={result.candidate.id}
+                  label="Opção de troca"
+                  name={result.candidate.vehicle.name}
+                  tco={result.candidateTco}
+                  emphasized={result.candidateTco.cashTco.monthly < result.currentTco.cashTco.monthly}
+                />
+              ))}
+            </div>
+          )}
           <TcoBreakdownTable
-            current={result.current.vehicle}
-            option={result.candidate.vehicle}
+            current={state.currentVehicle.vehicle}
+            options={results.map((result) => result.candidate.vehicle)}
           />
-          <section className="data-card">
-            <h2>Diferenças</h2>
-            <div className="insight-metrics">
-              <div><span>Diferença absoluta de caixa</span><strong>{formatCurrency(result.cashDifference.absolute.annual)}/ano</strong></div>
-              <div><span>Diferença percentual de caixa</span><strong>{formatPercentageValue(result.cashDifference.percentage.annual)}</strong></div>
-              <div><span>Diferença econômica absoluta</span><strong>{formatCurrency(result.economicDifference.absolute.annual)}/ano</strong></div>
-              <div><span>Diferença econômica percentual</span><strong>{formatPercentageValue(result.economicDifference.percentage.annual)}</strong></div>
+          <section>
+            <div className="section-heading"><div><span className="eyebrow">Visão consolidada</span><h2>Diferenças</h2></div></div>
+            <div className={`multi-result-grid ${results.length === 1 ? 'multi-result-grid-single' : ''}`}>
+              {results.map((result) => (
+                <ConsolidatedDifferences key={result.candidate.id} result={result} />
+              ))}
             </div>
           </section>
         </>

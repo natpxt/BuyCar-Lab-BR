@@ -1,5 +1,11 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useAppState } from '../application/AppStateProvider'
+import {
+  loadThemePreference,
+  oppositeTheme,
+  saveThemePreference,
+  type ThemeMode,
+} from '../application/themePreference'
 
 export type AppArea = 'vehicles' | 'comparison' | 'financing' | 'decision'
 
@@ -16,14 +22,30 @@ const areas: readonly { id: AppArea; label: string; description: string }[] = [
   { id: 'decision', label: 'Ciladômetro', description: 'Decisão final' },
 ]
 
+function prefersDarkTheme(): boolean {
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+}
+
 export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
   const { persistenceError, clearAllData } = useAppState()
+  const [theme, setTheme] = useState<ThemeMode>(() => (
+    loadThemePreference(window.localStorage, prefersDarkTheme())
+  ))
+  const activeAreaDetails = areas.find((area) => area.id === activeArea)
+    ?? areas[0]
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+    saveThemePreference(window.localStorage, theme)
+  }, [theme])
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">BL</div>
-          <div><strong>BuyCar Lab - BR</strong><span>Análise automotiva pessoal</span></div>
+          <div><strong>BuyCar Lab - BR</strong><span>É cilada ou não?</span></div>
         </div>
         <nav className="main-nav" aria-label="Áreas principais">
           {areas.map((area, index) => (
@@ -47,14 +69,38 @@ export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
           </button>
         </footer>
       </aside>
-      <main className="main-content">
-        {persistenceError && (
-          <div className="alert alert-error persistence-alert">
-            <strong>Erro de persistência.</strong> {persistenceError.message}. Os dados desta sessão foram preservados em memória.
+
+      <div className="workspace">
+        <header className="workspace-topbar">
+          <div className="workspace-context">
+            <span className="eyebrow">Área atual</span>
+            <strong>{activeAreaDetails.label}</strong>
           </div>
-        )}
-        {children}
-      </main>
+          <div className="topbar-actions">
+            <button
+              type="button"
+              className="theme-toggle"
+              aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              aria-pressed={theme === 'dark'}
+              onClick={() => setTheme((current) => oppositeTheme(current))}
+            >
+              <span className="theme-toggle-track" aria-hidden="true">
+                <span className="theme-toggle-thumb" />
+              </span>
+              <span>{theme === 'dark' ? 'Modo claro' : 'Modo escuro'}</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="main-content">
+          {persistenceError && (
+            <div className="alert alert-error persistence-alert">
+              <strong>Erro de persistência.</strong> {persistenceError.message}. Os dados desta sessão foram preservados em memória.
+            </div>
+          )}
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

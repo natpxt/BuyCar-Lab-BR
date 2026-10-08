@@ -81,13 +81,13 @@ function FinancingCharts({ result }: {
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 12, right: 12, left: 12, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dce4df" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                 <XAxis dataKey="period" interval="preserveStartEnd" minTickGap={28} />
                 <YAxis width={72} tickFormatter={(value) => chartCurrency(Number(value))} />
                 <Tooltip formatter={(value) => chartCurrency(Number(value))} labelFormatter={(label) => `Período ${label}`} />
                 <Legend wrapperStyle={{ paddingTop: 10, fontSize: 12 }} />
-                <Line type="monotone" dataKey="baselineBalance" name="Sem amortização" stroke="#68766e" dot={false} strokeWidth={2} connectNulls={false} />
-                <Line type="monotone" dataKey="scenarioBalance" name={strategyLabels[strategy]} stroke="#1d6b50" dot={false} strokeWidth={3} connectNulls={false} />
+                <Line type="monotone" dataKey="baselineBalance" name="Sem amortização" stroke="#6b7b8a" dot={false} strokeWidth={2} connectNulls={false} />
+                <Line type="monotone" dataKey="scenarioBalance" name={strategyLabels[strategy]} stroke="var(--brand)" dot={false} strokeWidth={3} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -99,15 +99,15 @@ function FinancingCharts({ result }: {
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} margin={{ top: 12, right: 8, left: 8, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dce4df" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                 <XAxis dataKey="period" interval="preserveStartEnd" minTickGap={28} />
                 <YAxis width={72} tickFormatter={(value) => chartCurrency(Number(value))} />
                 <Tooltip formatter={(value) => chartCurrency(Number(value))} labelFormatter={(label) => `Período ${label}`} />
                 <Legend wrapperStyle={{ paddingTop: 10, fontSize: 12 }} />
                 <Bar dataKey="interest" name="Juros" stackId="payment" fill="#d7a93f" />
-                <Bar dataKey="principal" name="Amortização da parcela" stackId="payment" fill="#4f9979" />
-                <Bar dataKey="extraPayment" name="Aporte" stackId="payment" fill="#1d6b50" />
-                <Bar dataKey="periodicCharges" name="Cobranças" stackId="payment" fill="#9aa79f" />
+                <Bar dataKey="principal" name="Amortização da parcela" stackId="payment" fill="#5f8fb5" />
+                <Bar dataKey="extraPayment" name="Aporte" stackId="payment" fill="var(--brand)" />
+                <Bar dataKey="periodicCharges" name="Cobranças" stackId="payment" fill="#94a3b0" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -119,13 +119,13 @@ function FinancingCharts({ result }: {
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 12, right: 8, left: 8, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dce4df" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                 <XAxis dataKey="period" interval="preserveStartEnd" minTickGap={28} />
                 <YAxis width={72} tickFormatter={(value) => chartCurrency(Number(value))} />
                 <Tooltip formatter={(value) => chartCurrency(Number(value))} labelFormatter={(label) => `Período ${label}`} />
                 <Legend wrapperStyle={{ paddingTop: 10, fontSize: 12 }} />
-                <Line type="stepAfter" dataKey="baselinePayment" name="Sem amortização" stroke="#68766e" dot={false} strokeWidth={2} connectNulls={false} />
-                <Line type="stepAfter" dataKey="scenarioPayment" name={strategyLabels[strategy]} stroke="#1d6b50" dot={false} strokeWidth={3} connectNulls={false} />
+                <Line type="stepAfter" dataKey="baselinePayment" name="Sem amortização" stroke="#6b7b8a" dot={false} strokeWidth={2} connectNulls={false} />
+                <Line type="stepAfter" dataKey="scenarioPayment" name={strategyLabels[strategy]} stroke="var(--brand)" dot={false} strokeWidth={3} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

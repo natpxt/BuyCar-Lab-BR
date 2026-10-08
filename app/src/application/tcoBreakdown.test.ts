@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Vehicle } from '../domain/vehicle'
 import {
   calculateTcoBreakdown,
+  compareMultipleTcoBreakdowns,
   compareTcoBreakdowns,
 } from './tcoBreakdown'
 
@@ -135,5 +136,14 @@ describe('breakdown comparativo de TCO', () => {
     expect(compareTcoBreakdowns(ice, phev)).toEqual(
       compareTcoBreakdowns(ice, phev),
     )
+  })
+
+  it('compara duas opções de forma independente contra o veículo atual', () => {
+    const comparison = compareMultipleTcoBreakdowns(ice, [bev, hev])
+    const bevFuel = comparison.options[0].rows.find((row) => row.component === 'fuel')
+    const hevFuel = comparison.options[1].rows.find((row) => row.component === 'fuel')
+    expect(bevFuel?.difference.annual).toBe(6_000)
+    expect(hevFuel?.difference.annual).toBe(3_000)
+    expect(comparison.options.map((option) => option.vehicle.name)).toEqual(['BEV', 'HEV'])
   })
 })
