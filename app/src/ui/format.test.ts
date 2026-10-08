@@ -3,10 +3,13 @@ import {
   decimalToPercentageInput,
   formatCostPerKm,
   formatCurrency,
+  formatCurrencyInput,
   formatDecimalPercentage,
   formatOperationalComparisonLabel,
   formatOperationalHeadline,
   formatSignedMonthlyCurrency,
+  numberToCurrencyInput,
+  parseCurrencyInput,
   parsePtBrNumber,
   percentageInputToDecimal,
 } from './format'
@@ -15,6 +18,45 @@ describe('helpers de apresentação', () => {
   it('converte números digitados em pt-BR', () => {
     expect(parsePtBrNumber('1.234,56', 'valor')).toBe(1_234.56)
     expect(parsePtBrNumber('1,7%', 'taxa')).toBe(1.7)
+  })
+
+  it.each([
+    ['1000', '1.000'],
+    ['120000', '120.000'],
+    ['120000,5', '120.000,5'],
+    ['120000,50', '120.000,50'],
+    ['120.000,50', '120.000,50'],
+    ['R$ 120.000,50', '120.000,50'],
+  ])('formata entrada monetária %s como %s', (input, expected) => {
+    expect(formatCurrencyInput(input)).toBe(expected)
+  })
+
+  it.each([
+    ['120.000', 120_000],
+    ['120.000,50', 120_000.5],
+    ['6,59', 6.59],
+    ['174,08', 174.08],
+    ['70.000', 70_000],
+    ['10.000', 10_000],
+  ])('converte entrada monetária %s para %s', (input, expected) => {
+    expect(parseCurrencyInput(input)).toBe(expected)
+  })
+
+  it('mantém a entrada monetária vazia sem convertê-la em zero', () => {
+    expect(formatCurrencyInput('')).toBe('')
+    expect(parseCurrencyInput('')).toBeUndefined()
+  })
+
+  it('limita a entrada monetária a duas casas decimais', () => {
+    expect(formatCurrencyInput('1.234,5678')).toBe('1.234,56')
+  })
+
+  it('mantém ponto como separador de milhar durante a edição', () => {
+    expect(formatCurrencyInput('1.00')).toBe('100')
+  })
+
+  it('faz round-trip de número para input monetário e número', () => {
+    expect(parseCurrencyInput(numberToCurrencyInput(120_000.5))).toBe(120_000.5)
   })
 
   it('converte porcentagem visual e decimal nos dois sentidos', () => {

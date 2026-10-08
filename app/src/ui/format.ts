@@ -79,6 +79,52 @@ export function formatOperationalComparisonLabel(
     : `Custo adicional em relação ao ${currentVehicleName}`
 }
 
+function groupIntegerDigits(value: string): string {
+  const normalized = value.replace(/^0+(?=\d)/, '') || '0'
+  return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
+export function formatCurrencyInput(value: string): string {
+  const sanitized = value
+    .replace(/R\$/gi, '')
+    .replace(/\s/g, '')
+    .replace(/[^\d.,]/g, '')
+
+  if (sanitized.length === 0) {
+    return ''
+  }
+
+  const commaIndex = sanitized.indexOf(',')
+  const decimalIndex = commaIndex
+  const integerSource = decimalIndex >= 0
+    ? sanitized.slice(0, decimalIndex)
+    : sanitized
+  const decimalSource = decimalIndex >= 0
+    ? sanitized.slice(decimalIndex + 1)
+    : ''
+  const integerDigits = integerSource.replace(/\D/g, '')
+  const decimalDigits = decimalSource.replace(/\D/g, '').slice(0, 2)
+  const integer = groupIntegerDigits(integerDigits || '0')
+
+  return decimalIndex >= 0
+    ? `${integer},${decimalDigits}`
+    : integer
+}
+
+export function parseCurrencyInput(value: string): number | undefined {
+  const formatted = formatCurrencyInput(value)
+  if (formatted.length === 0) {
+    return undefined
+  }
+  return parsePtBrNumber(formatted, 'Valor monetário')
+}
+
+export function numberToCurrencyInput(value: number | undefined): string {
+  return value === undefined
+    ? ''
+    : formatCurrencyInput(String(value).replace('.', ','))
+}
+
 export function parsePtBrNumber(value: string, field: string): number {
   const normalized = value
     .trim()

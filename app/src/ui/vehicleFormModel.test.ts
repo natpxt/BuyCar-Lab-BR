@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { buildVehicleFromForm, createVehicleFormState } from './vehicleFormModel'
+import {
+  buildVehicleFromForm,
+  createVehicleFormState,
+  setLicensingAutomatic,
+  setPropertyTaxAutomatic,
+  SP_LICENSE_FEE_2026,
+  updateVehicleValue,
+} from './vehicleFormModel'
 
 const base = {
   ...createVehicleFormState(),
@@ -169,5 +176,94 @@ describe('formulário de veículo', () => {
     const form = createVehicleFormState(vehicle)
     expect(form.annualDepreciationPercent).toBe('5')
     expect(form.chargingLossPercent).toBe('10')
+  })
+
+  it('calcula IPVA padrão de R$ 4.000 para veículo novo de R$ 100.000', () => {
+    const form = updateVehicleValue(createVehicleFormState(), '100.000')
+    expect(form.propertyTax).toBe('4000')
+    expect(form.propertyTaxAutomatic).toBe(true)
+  })
+
+  it('atualiza o IPVA quando o valor muda no modo automático', () => {
+    const initial = updateVehicleValue(createVehicleFormState(), '100.000')
+    const updated = updateVehicleValue(initial, '120.000')
+    expect(updated.propertyTax).toBe('4800')
+  })
+
+  it('não sobrescreve IPVA após edição manual', () => {
+    const automatic = updateVehicleValue(createVehicleFormState(), '100.000')
+    const manual = {
+      ...automatic,
+      propertyTax: '3.000',
+      propertyTaxAutomatic: false,
+    }
+    expect(updateVehicleValue(manual, '120.000').propertyTax).toBe('3.000')
+  })
+
+  it('preserva IPVA manual de veículo existente', () => {
+    const vehicle = buildVehicleFromForm({
+      ...base,
+      powertrain: 'ICE',
+      propertyTax: '500',
+    })
+    const form = createVehicleFormState(vehicle)
+    expect(form.propertyTax).toBe('500')
+    expect(form.propertyTaxAutomatic).toBe(false)
+  })
+
+  it('preenche o licenciamento padrão de SP 2026 em veículo novo', () => {
+    const form = createVehicleFormState()
+    expect(form.licensing).toBe(String(SP_LICENSE_FEE_2026).replace('.', ','))
+    expect(form.licensingAutomatic).toBe(true)
+  })
+
+  it('permite editar o licenciamento manualmente', () => {
+    const form = {
+      ...createVehicleFormState(),
+      ...base,
+      licensing: '200',
+      licensingAutomatic: false,
+    }
+    expect(buildVehicleFromForm(form).annualCosts.licensing).toBe(200)
+  })
+
+  it('preserva licenciamento salvo de veículo existente', () => {
+    const vehicle = buildVehicleFromForm({
+      ...base,
+      powertrain: 'ICE',
+      licensing: '222',
+    })
+    const form = createVehicleFormState(vehicle)
+    expect(form.licensing).toBe('222')
+    expect(form.licensingAutomatic).toBe(false)
+  })
+
+  it('não substitui silenciosamente custos salvos da v0.8', () => {
+    const vehicle = buildVehicleFromForm({
+      ...base,
+      powertrain: 'ICE',
+      propertyTax: '1.234,56',
+      licensing: '199,9',
+    })
+    const reopened = createVehicleFormState(vehicle)
+    expect(reopened.propertyTax).toBe('1234,56')
+    expect(reopened.licensing).toBe('199,9')
+    expect(reopened.propertyTaxAutomatic).toBe(false)
+    expect(reopened.licensingAutomatic).toBe(false)
+  })
+
+  it('restaura defaults ao reativar os modos automáticos', () => {
+    const manual = {
+      ...createVehicleFormState(),
+      vehicleValue: '100.000',
+      propertyTax: '1.000',
+      propertyTaxAutomatic: false,
+      licensing: '200',
+      licensingAutomatic: false,
+    }
+    const withTax = setPropertyTaxAutomatic(manual, true)
+    const withDefaults = setLicensingAutomatic(withTax, true)
+    expect(withDefaults.propertyTax).toBe('4000')
+    expect(withDefaults.licensing).toBe('174,08')
   })
 })

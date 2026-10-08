@@ -36,9 +36,9 @@ export function FinancingScreen() {
     <div className="screen-stack">
       <header className="page-header">
         <div>
-          <span className="eyebrow">Compra e contrato PRICE</span>
-          <h1>Financiamento</h1>
-          <p>Configure o contrato, aportes e cobranças. Os resultados são recalculados a partir das entradas salvas.</p>
+          <span className="eyebrow">Compra, contrato e amortizações</span>
+          <h1>Laboratório do financiamento</h1>
+          <p>Configure o contrato, combine amortizações e analise o impacto no prazo, nos juros e no desembolso.</p>
         </div>
         <label className="field select-candidate">
           <span>Veículo a financiar</span>

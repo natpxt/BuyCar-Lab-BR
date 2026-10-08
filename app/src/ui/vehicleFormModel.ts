@@ -19,7 +19,9 @@ export interface VehicleFormState {
   readonly annualDepreciationPercent: string
   readonly insurance: string
   readonly propertyTax: string
+  readonly propertyTaxAutomatic: boolean
   readonly licensing: string
+  readonly licensingAutomatic: boolean
   readonly maintenance: string
   readonly fuelDescription: string
   readonly fuelConsumptionValue: string
@@ -32,11 +34,82 @@ export interface VehicleFormState {
   readonly combustionSharePercent: string
 }
 
+export const SP_PASSENGER_CAR_PROPERTY_TAX_RATE = 0.04
+export const SP_LICENSE_FEE_2026 = 174.08
+const monetaryTolerance = 0.01
+
+export function calculateSpPropertyTaxDefault(vehicleValue: number): number {
+  return vehicleValue * SP_PASSENGER_CAR_PROPERTY_TAX_RATE
+}
+
+function matchesMoneyDefault(value: number, expected: number): boolean {
+  return Math.abs(value - expected) <= monetaryTolerance
+}
+
+function automaticPropertyTaxInput(vehicleValue: string): string {
+  try {
+    return numberToInput(calculateSpPropertyTaxDefault(
+      parsePtBrNumber(vehicleValue, 'Valor do veículo'),
+    ))
+  } catch {
+    return ''
+  }
+}
+
+export function updateVehicleValue(
+  form: VehicleFormState,
+  vehicleValue: string,
+): VehicleFormState {
+  return {
+    ...form,
+    vehicleValue,
+    propertyTax: form.propertyTaxAutomatic
+      ? automaticPropertyTaxInput(vehicleValue)
+      : form.propertyTax,
+  }
+}
+
+export function setPropertyTaxAutomatic(
+  form: VehicleFormState,
+  automatic: boolean,
+): VehicleFormState {
+  return {
+    ...form,
+    propertyTaxAutomatic: automatic,
+    propertyTax: automatic
+      ? automaticPropertyTaxInput(form.vehicleValue)
+      : form.propertyTax,
+  }
+}
+
+export function setLicensingAutomatic(
+  form: VehicleFormState,
+  automatic: boolean,
+): VehicleFormState {
+  return {
+    ...form,
+    licensingAutomatic: automatic,
+    licensing: automatic
+      ? numberToInput(SP_LICENSE_FEE_2026)
+      : form.licensing,
+  }
+}
+
 export function createVehicleFormState(vehicle?: Vehicle): VehicleFormState {
   const fuel = vehicle && 'fuel' in vehicle ? vehicle.fuel : undefined
   const electricity = vehicle && 'electricity' in vehicle
     ? vehicle.electricity
     : undefined
+  const propertyTaxAutomatic = vehicle === undefined
+    || matchesMoneyDefault(
+      vehicle.annualCosts.propertyTax,
+      calculateSpPropertyTaxDefault(vehicle.vehicleValue),
+    )
+  const licensingAutomatic = vehicle === undefined
+    || matchesMoneyDefault(
+      vehicle.annualCosts.licensing,
+      SP_LICENSE_FEE_2026,
+    )
   return {
     name: vehicle?.name ?? '',
     powertrain: vehicle?.powertrain ?? 'ICE',
@@ -47,7 +120,11 @@ export function createVehicleFormState(vehicle?: Vehicle): VehicleFormState {
       : '',
     insurance: numberToInput(vehicle?.annualCosts.insurance),
     propertyTax: numberToInput(vehicle?.annualCosts.propertyTax),
-    licensing: numberToInput(vehicle?.annualCosts.licensing),
+    propertyTaxAutomatic,
+    licensing: numberToInput(
+      vehicle?.annualCosts.licensing ?? SP_LICENSE_FEE_2026,
+    ),
+    licensingAutomatic,
     maintenance: numberToInput(vehicle?.annualCosts.maintenance),
     fuelDescription: fuel?.description ?? 'Gasolina',
     fuelConsumptionValue: numberToInput(fuel?.consumption.value),

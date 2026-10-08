@@ -142,6 +142,7 @@ button {
 }
 
 .main-content {
+  min-width: 0;
   min-height: 100vh;
   margin-left: 260px;
   padding: 42px clamp(24px, 4vw, 64px) 70px;
@@ -149,6 +150,7 @@ button {
 
 .screen-stack,
 .results-stack {
+  min-width: 0;
   display: grid;
   gap: 28px;
   max-width: 1280px;
@@ -262,6 +264,7 @@ button {
 .editor-card,
 .insight-card,
 .empty-state {
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--surface);
@@ -389,6 +392,37 @@ button {
   padding-right: 72px;
 }
 
+.input-with-affixes {
+  position: relative;
+}
+
+.input-with-affixes .input-prefix,
+.input-with-affixes .input-suffix {
+  position: absolute;
+  top: 50%;
+  color: #65716a;
+  font-size: 0.78rem;
+  font-weight: 750;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.input-with-affixes .input-prefix {
+  left: 12px;
+}
+
+.input-with-affixes .input-suffix {
+  right: 12px;
+}
+
+.input-with-affixes input {
+  padding-left: 38px;
+}
+
+.input-with-affixes:has(.input-suffix) input {
+  padding-right: 58px;
+}
+
 fieldset {
   margin: 24px 0 0;
   padding: 22px;
@@ -433,6 +467,20 @@ legend {
   width: 18px;
   height: 18px;
   accent-color: var(--brand);
+}
+
+.check-field-compact {
+  margin-top: 8px;
+  color: #44534b;
+  font-size: 0.72rem;
+}
+
+.cost-default-field > small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
 }
 
 .repeat-list {
@@ -564,6 +612,9 @@ legend {
 }
 
 .table-scroll {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   max-height: 560px;
   overflow: auto;
   border: 1px solid var(--line);
@@ -670,6 +721,205 @@ tbody tr:hover {
   line-height: 1.45;
 }
 
+.amortization-type-picker {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px dashed #afc7b9;
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.amortization-plan-list {
+  display: grid;
+  gap: 14px;
+}
+
+.amortization-plan {
+  padding: 18px;
+  border: 1px solid #cddbd3;
+  border-radius: 14px;
+  background: #fbfdfc;
+}
+
+.amortization-plan-recurring {
+  border-color: #a7ccb9;
+  background: #f4fbf7;
+}
+
+.plan-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.plan-heading > div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.plan-exceptions {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.plan-exceptions .fieldset-heading {
+  margin-bottom: 12px;
+}
+
+.lab-impact-grid {
+  margin-top: 16px;
+}
+
+.lab-summary {
+  margin: 18px 0 0;
+  padding: 16px;
+  border-left: 4px solid var(--brand);
+  border-radius: 0 10px 10px 0;
+  color: #2b493b;
+  background: var(--brand-soft);
+  line-height: 1.55;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.chart-card,
+.chart-container,
+.chart-card .recharts-responsive-container {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.chart-card-wide {
+  grid-column: 1 / -1;
+}
+
+.chart-card h3 {
+  margin: 0;
+}
+
+.chart-container {
+  width: 100%;
+  height: 320px;
+  margin-top: 16px;
+}
+
+.chart-strategy-select {
+  width: min(280px, 100%);
+}
+
+.chart-card .recharts-default-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  white-space: normal;
+}
+
+.table-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.table-scenario-control {
+  min-width: 0;
+  grid-column: span 2;
+}
+
+.table-scenario-control .segmented-control {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  overflow-x: auto;
+}
+
+.control-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #44534b;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.segmented-control {
+  display: flex;
+  padding: 3px;
+  border: 1px solid #cbd8d0;
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.segmented-control button {
+  flex: 1;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: normal;
+}
+
+.segmented-control button.active {
+  color: white;
+  background: var(--brand);
+}
+
+.compact-segmented {
+  min-width: 190px;
+}
+
+.amortization-table {
+  min-width: 1120px;
+  font-variant-numeric: tabular-nums;
+}
+
+.amortization-table th,
+.amortization-table td {
+  text-align: center;
+}
+
+.tco-breakdown-table th:first-child,
+.tco-breakdown-table td:first-child {
+  text-align: left;
+}
+
+.tco-total-row {
+  background: #f4f8f5;
+  font-weight: 800;
+}
+
+.cost-difference {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.cost-difference small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.cost-difference-saving strong {
+  color: var(--brand);
+}
+
+.cost-difference-cost strong {
+  color: var(--danger);
+}
+
 @media (max-width: 1080px) {
   .sidebar {
     position: static;
@@ -697,13 +947,27 @@ tbody tr:hover {
   .form-grid-four,
   .insight-metrics,
   .strategy-grid,
-  .decision-highlights {
+  .decision-highlights,
+  .table-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .repeat-row-charge {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .table-scenario-control {
+    grid-column: 1 / -1;
+  }
+
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-card-wide {
+    grid-column: auto;
+  }
+
 }
 
 @media (max-width: 700px) {
@@ -723,8 +987,39 @@ tbody tr:hover {
   .repeat-row,
   .repeat-row-charge,
   .decision-hero,
-  .decision-highlights {
+  .decision-highlights,
+  .chart-grid,
+  .table-controls {
     grid-template-columns: 1fr;
+  }
+
+  .chart-card-wide {
+    grid-column: auto;
+  }
+
+  .table-scenario-control {
+    grid-column: auto;
+  }
+
+  .table-scenario-control .segmented-control {
+    grid-template-columns: 1fr;
+    overflow-x: visible;
+  }
+
+  .chart-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chart-container {
+    height: 280px;
+  }
+
+  .plan-heading,
+  .plan-heading > div,
+  .amortization-type-picker {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .page-header,

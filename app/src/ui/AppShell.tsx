@@ -12,7 +12,7 @@ interface AppShellProps {
 const areas: readonly { id: AppArea; label: string; description: string }[] = [
   { id: 'vehicles', label: 'Veículos', description: 'Cadastros e custos' },
   { id: 'comparison', label: 'Comparação', description: 'TCO lado a lado' },
-  { id: 'financing', label: 'Financiamento', description: 'PRICE e aportes' },
+  { id: 'financing', label: 'Financiamento', description: 'Contrato e amortizações' },
   { id: 'decision', label: 'Ciladômetro', description: 'Decisão final' },
 ]
 

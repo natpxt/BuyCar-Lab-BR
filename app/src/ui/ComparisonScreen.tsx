@@ -11,6 +11,7 @@ import {
   formatOperationalHeadline,
   formatPercentageValue,
 } from './format'
+import { TcoBreakdownTable } from './TcoBreakdownTable'
 
 interface TcoPanelProps {
   readonly label: string
@@ -109,6 +110,10 @@ export function ComparisonScreen() {
             <TcoPanel label="Veículo atual" name={result.current.vehicle.name} tco={result.currentTco} emphasized={result.currentTco.cashTco.monthly <= result.candidateTco.cashTco.monthly} />
             <TcoPanel label="Opção de troca" name={result.candidate.vehicle.name} tco={result.candidateTco} emphasized={result.candidateTco.cashTco.monthly < result.currentTco.cashTco.monthly} />
           </div>
+          <TcoBreakdownTable
+            current={result.current.vehicle}
+            option={result.candidate.vehicle}
+          />
           <section className="data-card">
             <h2>Diferenças</h2>
             <div className="insight-metrics">

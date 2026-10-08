@@ -9,6 +9,7 @@ import {
   type OneTimePaymentRow,
   type PeriodicChargeRow,
 } from './financingFormModel'
+import { CurrencyInput } from './CurrencyInput'
 
 interface FinancingFormProps {
   readonly candidateId: string
@@ -55,10 +56,12 @@ export function FinancingForm({
 }: FinancingFormProps) {
   const [form, setForm] = useState(() => createFinancingFormState(initialValue, suggestedPrice))
   const [error, setError] = useState<string | null>(null)
+  const [choosingAmortization, setChoosingAmortization] = useState(false)
 
   useEffect(() => {
     setForm(createFinancingFormState(initialValue, suggestedPrice))
     setError(null)
+    setChoosingAmortization(false)
   }, [candidateId, initialValue, suggestedPrice])
 
   const update = <K extends keyof FinancingFormState>(field: K, value: FinancingFormState[K]) => {
@@ -78,6 +81,21 @@ export function FinancingForm({
     }))
   }
 
+  const addRecurringPlan = () => {
+    if (form.recurringEnabled) {
+      setError('Somente um plano de amortização recorrente é suportado atualmente')
+      setChoosingAmortization(false)
+      return
+    }
+    setForm((current) => ({
+      ...current,
+      recurringEnabled: true,
+      recurringFrequencyMonths: current.recurringFrequencyMonths || '1',
+    }))
+    setError(null)
+    setChoosingAmortization(false)
+  }
+
   const submit = (event: FormEvent) => {
     event.preventDefault()
     try {
@@ -95,16 +113,16 @@ export function FinancingForm({
       <fieldset>
         <legend>Compra</legend>
         <div className="form-grid form-grid-four">
-          <Input label="Preço" suffix="R$" value={form.price} onChange={(value) => update('price', value)} />
-          <Input label="Valor de troca" suffix="R$" value={form.tradeInValue} onChange={(value) => update('tradeInValue', value)} />
-          <Input label="Entrada adicional" suffix="R$" value={form.additionalDownPayment} onChange={(value) => update('additionalDownPayment', value)} />
-          <Input label="Custos financiados" suffix="R$" value={form.financedCosts} onChange={(value) => update('financedCosts', value)} />
+          <CurrencyInput label="Preço" value={form.price} onChange={(value) => update('price', value)} />
+          <CurrencyInput label="Valor de troca" value={form.tradeInValue} onChange={(value) => update('tradeInValue', value)} />
+          <CurrencyInput label="Entrada adicional" value={form.additionalDownPayment} onChange={(value) => update('additionalDownPayment', value)} />
+          <CurrencyInput label="Custos financiados" value={form.financedCosts} onChange={(value) => update('financedCosts', value)} />
         </div>
         {form.price.trim() ? (
           <p className="field-help">O valor financiado será calculado automaticamente com preço, troca, entrada e custos financiados.</p>
         ) : (
           <div className="form-grid">
-            <Input label="Valor financiado manual" suffix="R$" value={form.manualAmount} onChange={(value) => update('manualAmount', value)} />
+            <CurrencyInput label="Valor financiado manual" value={form.manualAmount} onChange={(value) => update('manualAmount', value)} />
             <p className="field-help">Fallback usado somente porque o preço não foi informado.</p>
           </div>
         )}
@@ -121,35 +139,70 @@ export function FinancingForm({
       </fieldset>
 
       <fieldset>
-        <div className="fieldset-heading"><legend>Aportes únicos</legend><button type="button" className="button button-small button-secondary" onClick={() => update('oneTimePayments', [...form.oneTimePayments, { key: rowKey(), amount: '', period: '' }])}>Adicionar aporte</button></div>
-        {form.oneTimePayments.length === 0 && <p className="field-help">Nenhum aporte único cadastrado.</p>}
-        <div className="repeat-list">
-          {form.oneTimePayments.map((row) => (
-            <div className="repeat-row" key={row.key}>
-              <Input label="Valor" suffix="R$" value={row.amount} onChange={(amount) => update('oneTimePayments', updateRow<OneTimePaymentRow>(form.oneTimePayments, row.key, { amount }))} />
-              <Input label="Período" value={row.period} onChange={(period) => update('oneTimePayments', updateRow<OneTimePaymentRow>(form.oneTimePayments, row.key, { period }))} />
-              <button type="button" className="button button-small button-danger" onClick={() => update('oneTimePayments', form.oneTimePayments.filter((item) => item.key !== row.key))}>Remover</button>
-            </div>
-          ))}
+        <div className="fieldset-heading">
+          <div><legend>Planos de amortização</legend><p className="field-help">Combine amortizações únicas com um plano recorrente.</p></div>
+          <button type="button" className="button button-small button-secondary" onClick={() => setChoosingAmortization((current) => !current)}>Adicionar amortização</button>
         </div>
-      </fieldset>
 
-      <fieldset>
-        <label className="check-field"><input type="checkbox" checked={form.recurringEnabled} onChange={(event) => toggleRecurring(event.target.checked)} /><span>Ativar aporte recorrente</span></label>
-        {form.recurringEnabled && <div className="form-grid form-grid-four"><Input label="Valor" suffix="R$" value={form.recurringAmount} onChange={(value) => update('recurringAmount', value)} /><Input label="Período inicial" value={form.recurringStartPeriod} onChange={(value) => update('recurringStartPeriod', value)} /><Input label="Período final (opcional)" value={form.recurringEndPeriod} onChange={(value) => update('recurringEndPeriod', value)} /><Input label="Frequência" suffix="meses" value={form.recurringFrequencyMonths} onChange={(value) => update('recurringFrequencyMonths', value)} /></div>}
-      </fieldset>
-
-      <fieldset>
-        <div className="fieldset-heading"><legend>Substituições manuais</legend>{form.recurringEnabled && <button type="button" className="button button-small button-secondary" onClick={() => update('manualReplacements', [...form.manualReplacements, { key: rowKey(), amount: '', period: '' }])}>Adicionar substituição</button>}</div>
-        {!form.recurringEnabled && <p className="field-help">Ative o aporte recorrente para substituir o valor de uma ocorrência específica.</p>}
-        {form.recurringEnabled && (
-          <>
-            {form.manualReplacements.length === 0 && <p className="field-help">A substituição altera somente uma ocorrência válida do aporte recorrente.</p>}
-            <div className="repeat-list">
-              {form.manualReplacements.map((row) => <div className="repeat-row" key={row.key}><Input label="Período da ocorrência" value={row.period} onChange={(period) => update('manualReplacements', updateRow<ManualReplacementRow>(form.manualReplacements, row.key, { period }))} /><Input label="Novo valor" suffix="R$" value={row.amount} onChange={(amount) => update('manualReplacements', updateRow<ManualReplacementRow>(form.manualReplacements, row.key, { amount }))} /><button type="button" className="button button-small button-danger" onClick={() => update('manualReplacements', form.manualReplacements.filter((item) => item.key !== row.key))}>Remover</button></div>)}
-            </div>
-          </>
+        {choosingAmortization && (
+          <div className="amortization-type-picker" role="group" aria-label="Tipo de amortização">
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => {
+                update('oneTimePayments', [
+                  ...form.oneTimePayments,
+                  { key: rowKey(), amount: '', period: '' },
+                ])
+                setChoosingAmortization(false)
+              }}
+            >
+              Única
+            </button>
+            <button type="button" className="button button-secondary" onClick={addRecurringPlan}>Recorrente</button>
+          </div>
         )}
+
+        {form.oneTimePayments.length === 0 && !form.recurringEnabled && (
+          <p className="field-help">Nenhuma amortização extra cadastrada.</p>
+        )}
+
+        <div className="amortization-plan-list">
+          {form.oneTimePayments.map((row) => (
+            <article className="amortization-plan" key={row.key}>
+              <div className="plan-heading"><div><span className="tag">Única</span><strong>Amortização em uma parcela</strong></div><button type="button" className="button button-small button-danger" onClick={() => update('oneTimePayments', form.oneTimePayments.filter((item) => item.key !== row.key))}>Excluir</button></div>
+              <div className="form-grid">
+                <CurrencyInput label="Valor" value={row.amount} onChange={(amount) => update('oneTimePayments', updateRow<OneTimePaymentRow>(form.oneTimePayments, row.key, { amount }))} />
+                <Input label="Parcela" value={row.period} onChange={(period) => update('oneTimePayments', updateRow<OneTimePaymentRow>(form.oneTimePayments, row.key, { period }))} />
+              </div>
+            </article>
+          ))}
+
+          {form.recurringEnabled && (
+            <article className="amortization-plan amortization-plan-recurring">
+              <div className="plan-heading"><div><span className="tag">Recorrente</span><strong>Amortização em intervalos regulares</strong></div><button type="button" className="button button-small button-danger" onClick={() => toggleRecurring(false)}>Excluir</button></div>
+              <div className="form-grid form-grid-four">
+                <CurrencyInput label="Valor" value={form.recurringAmount} onChange={(value) => update('recurringAmount', value)} />
+                <Input label="Primeira parcela" value={form.recurringStartPeriod} onChange={(value) => update('recurringStartPeriod', value)} />
+                <Input label="Última parcela (opcional)" value={form.recurringEndPeriod} onChange={(value) => update('recurringEndPeriod', value)} />
+                <Input label="Frequência" suffix="meses" value={form.recurringFrequencyMonths} onChange={(value) => update('recurringFrequencyMonths', value)} />
+              </div>
+
+              <div className="plan-exceptions">
+                <div className="fieldset-heading"><div><strong>Exceções do plano recorrente</strong><p className="field-help">Cada exceção substitui o valor somente naquela ocorrência.</p></div><button type="button" className="button button-small button-secondary" onClick={() => update('manualReplacements', [...form.manualReplacements, { key: rowKey(), amount: '', period: '' }])}>Adicionar exceção</button></div>
+                <div className="repeat-list">
+                  {form.manualReplacements.map((row) => (
+                    <div className="repeat-row" key={row.key}>
+                      <Input label="Parcela da ocorrência" value={row.period} onChange={(period) => update('manualReplacements', updateRow<ManualReplacementRow>(form.manualReplacements, row.key, { period }))} />
+                      <CurrencyInput label="Novo valor" value={row.amount} onChange={(amount) => update('manualReplacements', updateRow<ManualReplacementRow>(form.manualReplacements, row.key, { amount }))} />
+                      <button type="button" className="button button-small button-danger" onClick={() => update('manualReplacements', form.manualReplacements.filter((item) => item.key !== row.key))}>Remover</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </article>
+          )}
+        </div>
       </fieldset>
 
       <fieldset>
@@ -159,7 +212,7 @@ export function FinancingForm({
           {form.periodicCharges.map((row) => (
             <div className="repeat-row repeat-row-charge" key={row.key}>
               <label className="field"><span>Descrição</span><input value={row.description} placeholder="Seguro" onChange={(event) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { description: event.target.value }))} /></label>
-              <Input label="Valor" suffix="R$" value={row.amount} onChange={(amount) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { amount }))} />
+              <CurrencyInput label="Valor" value={row.amount} onChange={(amount) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { amount }))} />
               <Input label="Início" value={row.startPeriod} onChange={(startPeriod) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { startPeriod }))} />
               <Input label="Fim (opcional)" value={row.endPeriod} onChange={(endPeriod) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { endPeriod }))} />
               <Input label="Frequência" value={row.frequencyMonths} onChange={(frequencyMonths) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { frequencyMonths }))} />

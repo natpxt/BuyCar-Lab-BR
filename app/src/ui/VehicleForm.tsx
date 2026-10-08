@@ -3,8 +3,12 @@ import type { Powertrain, Vehicle } from '../domain/vehicle'
 import {
   buildVehicleFromForm,
   createVehicleFormState,
+  setLicensingAutomatic,
+  setPropertyTaxAutomatic,
+  updateVehicleValue,
   type VehicleFormState,
 } from './vehicleFormModel'
+import { CurrencyInput } from './CurrencyInput'
 
 interface VehicleFormProps {
   readonly initialVehicle?: Vehicle
@@ -107,17 +111,25 @@ export function VehicleForm({
           </select>
         </label>
         <Field label="Quilometragem anual" suffix="km/ano" value={form.annualMileageKm} onChange={(value) => update('annualMileageKm', value)} />
-        <Field label="Valor do veículo" suffix="R$" value={form.vehicleValue} onChange={(value) => update('vehicleValue', value)} />
+        <CurrencyInput label="Valor do veículo" value={form.vehicleValue} onChange={(value) => setForm((current) => updateVehicleValue(current, value))} />
         <Field label="Depreciação anual" suffix="%" value={form.annualDepreciationPercent} onChange={(value) => update('annualDepreciationPercent', value)} />
       </div>
 
       <fieldset>
         <legend>Custos anuais</legend>
         <div className="form-grid form-grid-four">
-          <Field label="Seguro" suffix="R$" value={form.insurance} onChange={(value) => update('insurance', value)} />
-          <Field label="IPVA" suffix="R$" value={form.propertyTax} onChange={(value) => update('propertyTax', value)} />
-          <Field label="Licenciamento" suffix="R$" value={form.licensing} onChange={(value) => update('licensing', value)} />
-          <Field label="Manutenção" suffix="R$" value={form.maintenance} onChange={(value) => update('maintenance', value)} />
+          <CurrencyInput label="Seguro" value={form.insurance} onChange={(value) => update('insurance', value)} />
+          <div className="cost-default-field">
+            <CurrencyInput label="IPVA anual" value={form.propertyTax} onChange={(value) => setForm((current) => ({ ...current, propertyTax: value, propertyTaxAutomatic: false }))} />
+            <label className="check-field check-field-compact"><input type="checkbox" checked={form.propertyTaxAutomatic} onChange={(event) => setForm((current) => setPropertyTaxAutomatic(current, event.target.checked))} /><span>Usar estimativa automática</span></label>
+            <small>Estimado em 4% do valor do veículo — SP.</small>
+          </div>
+          <div className="cost-default-field">
+            <CurrencyInput label="Licenciamento SP — 2026" value={form.licensing} onChange={(value) => setForm((current) => ({ ...current, licensing: value, licensingAutomatic: false }))} />
+            <label className="check-field check-field-compact"><input type="checkbox" checked={form.licensingAutomatic} onChange={(event) => setForm((current) => setLicensingAutomatic(current, event.target.checked))} /><span>Usar valor padrão de 2026</span></label>
+            <small>Valor padrão editável: R$ 174,08.</small>
+          </div>
+          <CurrencyInput label="Manutenção" value={form.maintenance} onChange={(value) => update('maintenance', value)} />
         </div>
       </fieldset>
 
@@ -137,7 +149,7 @@ export function VehicleForm({
                 <option value="L/100km">L/100 km</option>
               </select>
             </label>
-            <Field label="Preço do combustível" suffix="R$/L" value={form.pricePerLiter} onChange={(value) => update('pricePerLiter', value)} />
+            <CurrencyInput label="Preço do combustível" suffix="/L" value={form.pricePerLiter} onChange={(value) => update('pricePerLiter', value)} />
           </div>
         </fieldset>
       )}
@@ -147,7 +159,7 @@ export function VehicleForm({
           <legend>Energia elétrica</legend>
           <div className="form-grid">
             <Field label="Consumo elétrico" suffix="kWh/100 km" value={form.consumptionKwhPer100Km} onChange={(value) => update('consumptionKwhPer100Km', value)} />
-            <Field label="Preço da energia" suffix="R$/kWh" value={form.pricePerKwh} onChange={(value) => update('pricePerKwh', value)} />
+            <CurrencyInput label="Preço da energia" suffix="/kWh" value={form.pricePerKwh} onChange={(value) => update('pricePerKwh', value)} />
             <Field label="Perdas de carregamento" suffix="%" value={form.chargingLossPercent} onChange={(value) => update('chargingLossPercent', value)} />
           </div>
           {form.powertrain === 'PHEV' && (
