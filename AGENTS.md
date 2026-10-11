@@ -4,7 +4,7 @@
 
 Use português do Brasil nas interações, na documentação e nos textos da interface. Use inglês para nomes de variáveis, funções, tipos, componentes e arquivos de código.
 
-O produto é um aplicativo pessoal para comparar TCO e financiamento de veículos ICE, HEV, PHEV e BEV. O MVP deve funcionar localmente. Não adicione backend, cloud, Supabase, autenticação ou APIs externas sem necessidade aprovada. Evite overengineering e implemente apenas o escopo solicitado.
+O produto é um aplicativo pessoal para comparar TCO e financiamento de veículos ICE, HEV, PHEV e BEV. A v1.x funciona localmente. Não adicione backend, cloud, Supabase, autenticação ou APIs externas sem necessidade aprovada. Evite overengineering e implemente apenas o escopo solicitado.
 
 ## Estrutura do projeto
 
@@ -31,8 +31,21 @@ Use TypeScript e componentes funcionais. Adote dois espaços, aspas simples e se
 
 Diferencie TCO de caixa, TCO econômico e fluxo de caixa do financiamento no código e na interface. Principal amortizado reduz dívida e não é custo econômico. Documente premissas, unidades, períodos e arredondamentos junto às fórmulas.
 
-Alterações financeiras devem ser pequenas e verificáveis. Ainda não há testes ou meta de cobertura; escreva funções puras para futura cobertura automatizada. Ao adicionar testes, coloque-os junto ao módulo (`financing.test.ts`) e registre o comando em `package.json`. Até lá, valide exemplos conhecidos manualmente.
+Alterações financeiras devem ser pequenas e verificáveis. Preserve as funções puras e os testes automatizados existentes; ao adicionar testes, coloque-os junto ao módulo correspondente (`financing.test.ts`, por exemplo). Execute `npm test` e reconcilie exemplos conhecidos após mudanças financeiras.
 
 ## Commits e pull requests
 
-Ainda não há histórico de commits. Use mensagens imperativas, opcionalmente com Conventional Commits, como `feat: add vehicle comparison form`. Mantenha commits focados. Pull requests devem explicar a motivação, listar validações, vincular referências e incluir capturas para mudanças visuais. Destaque novas dependências, configurações e premissas financeiras.
+Use mensagens imperativas, opcionalmente com Conventional Commits, como `feat: add vehicle comparison form`. Mantenha commits focados. Pull requests devem explicar a motivação, listar validações, vincular referências e incluir capturas para mudanças visuais. Destaque novas dependências, configurações e premissas financeiras.
+
+## Governança documental
+
+Toda alteração funcional, financeira, de persistência ou de arquitetura deve avaliar obrigatoriamente `docs/FINANCIAL_MODEL.md`, `docs/PRODUCT_SPEC.md` e `docs/APPLICATION_GUIDE.md`.
+
+- Mudança de fórmula ou regra financeira: atualizar `FINANCIAL_MODEL.md` antes da implementação.
+- Mudança funcional ou de produto: atualizar `PRODUCT_SPEC.md`.
+- Após implementar uma mudança de comportamento: atualizar `APPLICATION_GUIDE.md` para refletir o comportamento real.
+- Se um documento não precisar mudar, registrar essa conclusão no relatório final.
+
+Cada documento possui revisão própria, independente da versão do aplicativo. Divergências devem ser classificadas como documentação desatualizada, gap de implementação ou decisão aberta e registradas explicitamente; não as corrija silenciosamente escolhendo uma fonte sem aplicar a hierarquia documental.
+
+Nenhuma feature é considerada concluída sem essa verificação.
