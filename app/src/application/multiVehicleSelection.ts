@@ -5,6 +5,7 @@ import {
 } from './appState'
 
 export const MAX_COMPARISON_OPTIONS = 2
+export const MAX_DASHBOARD_OPTIONS = 4
 
 export interface SelectionChange {
   readonly selectedIds: readonly string[]
@@ -25,11 +26,12 @@ export function reconcileOptionSelection(
   selectedIds: readonly string[],
   availableIds: readonly string[],
   persistedId: string | null,
+  maximumOptions = MAX_COMPARISON_OPTIONS,
 ): readonly string[] {
   const available = new Set(availableIds)
   const valid = selectedIds.filter((id, index) => (
     available.has(id) && selectedIds.indexOf(id) === index
-  )).slice(0, MAX_COMPARISON_OPTIONS)
+  )).slice(0, maximumOptions)
   return valid.length > 0
     ? valid
     : initializeOptionSelection(availableIds, persistedId)
@@ -38,6 +40,7 @@ export function reconcileOptionSelection(
 export function toggleOptionSelection(
   selectedIds: readonly string[],
   optionId: string,
+  maximumOptions = MAX_COMPARISON_OPTIONS,
 ): SelectionChange {
   if (selectedIds.includes(optionId)) {
     return {
@@ -45,7 +48,7 @@ export function toggleOptionSelection(
       limitReached: false,
     }
   }
-  if (selectedIds.length >= MAX_COMPARISON_OPTIONS) {
+  if (selectedIds.length >= maximumOptions) {
     return { selectedIds: [...selectedIds], limitReached: true }
   }
   return {

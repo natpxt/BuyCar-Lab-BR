@@ -301,4 +301,21 @@ describe('comparação de opções no Ciladômetro', () => {
     expect(first).toEqual(second)
     expect(state).toEqual(before)
   })
+
+  it('compara quatro opções financiadas no mesmo horizonte', () => {
+    let state = comparisonState()
+    state = addCandidate(state, vehicle('C', 15_000), 'c')
+    state = addCandidate(state, vehicle('D', 18_000), 'd')
+    state = addFinancing(state, 'c', 15_000, 24)
+    state = addFinancing(state, 'd', 20_000, 60)
+    const comparison = calculateDecisionOptionsComparison(state, ['a', 'b', 'c', 'd'])
+    expect(comparison.options).toHaveLength(4)
+    expect(comparison.comparisonHorizonMonths).toBe(60)
+    expect(comparison.options.map((option) => option.commonHorizonCashImpact?.horizonMonths)).toEqual([60, 60, 60, 60])
+    const minimum = Math.min(...comparison.options.map((option) => option.commonHorizonCashImpact!.cumulativeImpact))
+    for (const id of comparison.lowestTotalImpactOptionIds ?? []) {
+      expect(comparison.options.find((option) => option.result.comparison.candidate.id === id)?.commonHorizonCashImpact?.cumulativeImpact)
+        .toBeCloseTo(minimum)
+    }
+  })
 })

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { Vehicle } from '../domain/vehicle'
-import { calculateVehicleCardSummary } from './vehicleSummary'
+import {
+  calculateVehicleCardSummary,
+  findLowestMonthlyCashTcoVehicleIds,
+} from './vehicleSummary'
 
 const vehicle: Vehicle = {
   name: 'Tiida',
@@ -47,5 +50,27 @@ describe('resumo dos cards de veículos', () => {
     const before = structuredClone(vehicle)
     calculateVehicleCardSummary(vehicle)
     expect(vehicle).toEqual(before)
+  })
+  it('identifica a opção com menor TCO de caixa mensal', () => {
+    const expensive = { ...vehicle, name: 'Mais cara', annualCosts: { ...vehicle.annualCosts, maintenance: 2_400 } }
+    expect(findLowestMonthlyCashTcoVehicleIds([
+      { id: 'cheap', vehicle },
+      { id: 'expensive', vehicle: expensive },
+    ])).toEqual(['cheap'])
+  })
+
+  it('preserva empates sem escolher artificialmente um veículo', () => {
+    expect(findLowestMonthlyCashTcoVehicleIds([
+      { id: 'first', vehicle },
+      { id: 'second', vehicle: { ...vehicle, name: 'Mesmo custo' } },
+    ])).toEqual(['first', 'second'])
+  })
+
+  it('não cria destaque sem opções e não modifica as entradas', () => {
+    const candidates = [{ id: 'vehicle', vehicle }]
+    const before = structuredClone(candidates)
+    expect(findLowestMonthlyCashTcoVehicleIds([])).toEqual([])
+    findLowestMonthlyCashTcoVehicleIds(candidates)
+    expect(candidates).toEqual(before)
   })
 })

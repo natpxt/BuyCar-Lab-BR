@@ -10,6 +10,9 @@ import {
   type PeriodicChargeRow,
 } from './financingFormModel'
 import { CurrencyInput } from './CurrencyInput'
+import { ArrowLeftRight, CalendarClock, CalendarRange, Calculator, CirclePlus, FileSignature, HandCoins, Percent, Plus, Repeat, ShoppingBag, SlidersHorizontal, Tag, Trash2, TrendingDown, Wallet, type LucideIcon } from 'lucide-react'
+import { AppIcon } from './AppIcon'
+import { SectionHeader } from './SectionHeader'
 
 interface FinancingFormProps {
   readonly candidateId: string
@@ -29,6 +32,7 @@ function rowKey(): string {
 }
 
 interface InputProps {
+  readonly icon?: LucideIcon
   readonly label: string
   readonly value: string
   readonly suffix?: string
@@ -36,10 +40,10 @@ interface InputProps {
   onChange(value: string): void
 }
 
-function Input({ label, value, suffix, placeholder, onChange }: InputProps) {
+function Input({ label, value, suffix, placeholder, onChange, icon }: InputProps) {
   return (
     <label className="field">
-      <span>{label}</span>
+      <span>{icon && <AppIcon icon={icon} />}{label}</span>
       <div className="input-with-suffix">
         <input value={value} placeholder={placeholder} inputMode="decimal" onChange={(event) => onChange(event.target.value)} />
         {suffix && <small>{suffix}</small>}
@@ -107,16 +111,18 @@ export function FinancingForm({
   }
 
   return (
-    <form className="editor-card financing-form" onSubmit={submit}>
+    <form className="financing-config-form" onSubmit={submit}>
       {error && <div className="alert alert-error">{error}</div>}
 
-      <fieldset>
+      <div className="financing-core-grid">
+      <fieldset className="form-section financing-purchase financing-config-card">
         <legend>Compra</legend>
+        <SectionHeader icon={ShoppingBag} title="Composição da compra" />
         <div className="form-grid form-grid-four">
-          <CurrencyInput label="Preço" value={form.price} onChange={(value) => update('price', value)} />
-          <CurrencyInput label="Valor de troca" value={form.tradeInValue} onChange={(value) => update('tradeInValue', value)} />
-          <CurrencyInput label="Entrada adicional" value={form.additionalDownPayment} onChange={(value) => update('additionalDownPayment', value)} />
-          <CurrencyInput label="Custos financiados" value={form.financedCosts} onChange={(value) => update('financedCosts', value)} />
+          <div className="icon-field"><AppIcon icon={Tag} /><CurrencyInput label="Preço" value={form.price} onChange={(value) => update('price', value)} /></div>
+          <div className="icon-field"><AppIcon icon={ArrowLeftRight} /><CurrencyInput label="Valor de troca" value={form.tradeInValue} onChange={(value) => update('tradeInValue', value)} /></div>
+          <div className="icon-field"><AppIcon icon={HandCoins} /><CurrencyInput label="Entrada adicional" value={form.additionalDownPayment} onChange={(value) => update('additionalDownPayment', value)} /></div>
+          <div className="icon-field"><AppIcon icon={CirclePlus} /><CurrencyInput label="Custos financiados" value={form.financedCosts} onChange={(value) => update('financedCosts', value)} /></div>
         </div>
         {form.price.trim() ? (
           <p className="field-help">O valor financiado será calculado automaticamente com preço, troca, entrada e custos financiados.</p>
@@ -128,20 +134,23 @@ export function FinancingForm({
         )}
       </fieldset>
 
-      <fieldset>
+      <fieldset className="form-section financing-contract financing-config-card">
         <legend>Contrato PRICE</legend>
+        <SectionHeader icon={FileSignature} title="Condições financeiras" />
         <div className="form-grid">
-          <Input label="Taxa efetiva" suffix="%" value={form.ratePercent} onChange={(value) => update('ratePercent', value)} />
-          <label className="field"><span>Periodicidade</span><select value={form.ratePeriodicity} onChange={(event) => update('ratePeriodicity', event.target.value as FinancingFormState['ratePeriodicity'])}><option value="monthly">Mensal</option><option value="annual">Anual</option></select></label>
-          <Input label="Prazo" suffix="meses" value={form.termMonths} onChange={(value) => update('termMonths', value)} />
-          <label className="field field-wide"><span>Estratégia selecionada</span><select value={form.strategy} onChange={(event) => update('strategy', event.target.value as ExtraPaymentStrategy)}>{Object.entries(strategyLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <Input icon={Percent} label="Taxa efetiva" suffix="%" value={form.ratePercent} onChange={(value) => update('ratePercent', value)} />
+          <label className="field"><span><AppIcon icon={CalendarClock} />Periodicidade</span><select value={form.ratePeriodicity} onChange={(event) => update('ratePeriodicity', event.target.value as FinancingFormState['ratePeriodicity'])}><option value="monthly">Mensal</option><option value="annual">Anual</option></select></label>
+          <Input icon={CalendarRange} label="Prazo" suffix="meses" value={form.termMonths} onChange={(value) => update('termMonths', value)} />
+          <label className="field field-wide"><span><AppIcon icon={SlidersHorizontal} />Estratégia selecionada</span><select value={form.strategy} onChange={(event) => update('strategy', event.target.value as ExtraPaymentStrategy)}>{Object.entries(strategyLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         </div>
       </fieldset>
+      </div>
 
-      <fieldset>
+      <fieldset aria-label="Planos de amortização" className="form-section financing-plans financing-config-card financing-config-card-wide">
         <div className="fieldset-heading">
-          <div><legend>Planos de amortização</legend><p className="field-help">Combine amortizações únicas com um plano recorrente.</p></div>
-          <button type="button" className="button button-small button-secondary" onClick={() => setChoosingAmortization((current) => !current)}>Adicionar amortização</button>
+          <SectionHeader icon={TrendingDown} title="Planos de amortização" />
+          <span className="configuration-count">{form.oneTimePayments.length + (form.recurringEnabled ? 1 : 0)} plano(s)</span>
+          <button type="button" className="button button-small button-secondary" onClick={() => setChoosingAmortization((current) => !current)}><AppIcon icon={Plus} size={16} />Adicionar amortização</button>
         </div>
 
         {choosingAmortization && (
@@ -170,7 +179,7 @@ export function FinancingForm({
         <div className="amortization-plan-list">
           {form.oneTimePayments.map((row) => (
             <article className="amortization-plan" key={row.key}>
-              <div className="plan-heading"><div><span className="tag">Única</span><strong>Amortização em uma parcela</strong></div><button type="button" className="button button-small button-danger" onClick={() => update('oneTimePayments', form.oneTimePayments.filter((item) => item.key !== row.key))}>Excluir</button></div>
+              <div className="plan-heading"><div><span className="tag">Única</span><strong>Amortização em uma parcela</strong></div><button type="button" className="button button-small button-danger" onClick={() => update('oneTimePayments', form.oneTimePayments.filter((item) => item.key !== row.key))}><AppIcon icon={Trash2} size={16} />Excluir</button></div>
               <div className="form-grid">
                 <CurrencyInput label="Valor" value={row.amount} onChange={(amount) => update('oneTimePayments', updateRow<OneTimePaymentRow>(form.oneTimePayments, row.key, { amount }))} />
                 <Input label="Parcela" value={row.period} onChange={(period) => update('oneTimePayments', updateRow<OneTimePaymentRow>(form.oneTimePayments, row.key, { period }))} />
@@ -180,7 +189,7 @@ export function FinancingForm({
 
           {form.recurringEnabled && (
             <article className="amortization-plan amortization-plan-recurring">
-              <div className="plan-heading"><div><span className="tag">Recorrente</span><strong>Amortização em intervalos regulares</strong></div><button type="button" className="button button-small button-danger" onClick={() => toggleRecurring(false)}>Excluir</button></div>
+              <div className="plan-heading"><div><span className="tag"><AppIcon icon={Repeat} size={16} />Recorrente</span><strong>Amortização em intervalos regulares</strong></div><button type="button" className="button button-small button-danger" onClick={() => toggleRecurring(false)}><AppIcon icon={Trash2} size={16} />Excluir</button></div>
               <div className="form-grid form-grid-four">
                 <CurrencyInput label="Valor" value={form.recurringAmount} onChange={(value) => update('recurringAmount', value)} />
                 <Input label="Primeira parcela" value={form.recurringStartPeriod} onChange={(value) => update('recurringStartPeriod', value)} />
@@ -189,13 +198,13 @@ export function FinancingForm({
               </div>
 
               <div className="plan-exceptions">
-                <div className="fieldset-heading"><div><strong>Exceções do plano recorrente</strong><p className="field-help">Cada exceção substitui o valor somente naquela ocorrência.</p></div><button type="button" className="button button-small button-secondary" onClick={() => update('manualReplacements', [...form.manualReplacements, { key: rowKey(), amount: '', period: '' }])}>Adicionar exceção</button></div>
+                <div className="fieldset-heading"><div><strong>Exceções do plano recorrente</strong><p className="field-help">Cada exceção substitui o valor somente naquela ocorrência.</p></div><button type="button" className="button button-small button-secondary" onClick={() => update('manualReplacements', [...form.manualReplacements, { key: rowKey(), amount: '', period: '' }])}><AppIcon icon={Plus} size={16} />Adicionar exceção</button></div>
                 <div className="repeat-list">
                   {form.manualReplacements.map((row) => (
                     <div className="repeat-row" key={row.key}>
                       <Input label="Parcela da ocorrência" value={row.period} onChange={(period) => update('manualReplacements', updateRow<ManualReplacementRow>(form.manualReplacements, row.key, { period }))} />
                       <CurrencyInput label="Novo valor" value={row.amount} onChange={(amount) => update('manualReplacements', updateRow<ManualReplacementRow>(form.manualReplacements, row.key, { amount }))} />
-                      <button type="button" className="button button-small button-danger" onClick={() => update('manualReplacements', form.manualReplacements.filter((item) => item.key !== row.key))}>Remover</button>
+                      <button type="button" className="button button-small button-danger" onClick={() => update('manualReplacements', form.manualReplacements.filter((item) => item.key !== row.key))}><AppIcon icon={Trash2} size={16} />Remover</button>
                     </div>
                   ))}
                 </div>
@@ -205,24 +214,24 @@ export function FinancingForm({
         </div>
       </fieldset>
 
-      <fieldset>
-        <div className="fieldset-heading"><legend>Cobranças periódicas</legend><button type="button" className="button button-small button-secondary" onClick={() => update('periodicCharges', [...form.periodicCharges, { key: rowKey(), description: '', amount: '', startPeriod: '', endPeriod: '', frequencyMonths: '1' }])}>Adicionar cobrança</button></div>
-        {form.periodicCharges.length === 0 && <p className="field-help">Seguros e tarifas entram no desembolso sem aumentar o principal.</p>}
+      <fieldset aria-label="Cobranças periódicas" className="form-section financing-charges financing-config-card financing-config-card-wide">
+        <div className="fieldset-heading"><SectionHeader icon={Wallet} title="Cobranças periódicas" description="Seguros e tarifas entram no desembolso sem aumentar o principal." /><span className="configuration-count">{form.periodicCharges.length} cobrança(s)</span><button type="button" className="button button-small button-secondary" onClick={() => update('periodicCharges', [...form.periodicCharges, { key: rowKey(), description: '', amount: '', startPeriod: '', endPeriod: '', frequencyMonths: '1' }])}><AppIcon icon={Plus} size={16} />Adicionar cobrança</button></div>
+        {form.periodicCharges.length === 0 && <div className="compact-empty-state"><strong>Nenhuma cobrança configurada</strong><span>Adicione somente valores que saem do caixa durante o contrato.</span></div>}
         <div className="repeat-list">
           {form.periodicCharges.map((row) => (
-            <div className="repeat-row repeat-row-charge" key={row.key}>
+            <article className="repeat-row repeat-row-charge charge-plan" key={row.key}>
               <label className="field"><span>Descrição</span><input value={row.description} placeholder="Seguro" onChange={(event) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { description: event.target.value }))} /></label>
               <CurrencyInput label="Valor" value={row.amount} onChange={(amount) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { amount }))} />
               <Input label="Início" value={row.startPeriod} onChange={(startPeriod) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { startPeriod }))} />
               <Input label="Fim (opcional)" value={row.endPeriod} onChange={(endPeriod) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { endPeriod }))} />
               <Input label="Frequência" value={row.frequencyMonths} onChange={(frequencyMonths) => update('periodicCharges', updateRow<PeriodicChargeRow>(form.periodicCharges, row.key, { frequencyMonths }))} />
-              <button type="button" className="button button-small button-danger" onClick={() => update('periodicCharges', form.periodicCharges.filter((item) => item.key !== row.key))}>Remover</button>
-            </div>
+              <button type="button" className="button button-small button-danger" onClick={() => update('periodicCharges', form.periodicCharges.filter((item) => item.key !== row.key))}><AppIcon icon={Trash2} size={16} />Remover</button>
+            </article>
           ))}
         </div>
       </fieldset>
 
-      <div className="form-actions"><button className="button button-primary" type="submit">Salvar e calcular financiamento</button></div>
+      <div className="form-actions financing-form-actions"><span>Salve para atualizar o resumo e as análises com estes valores.</span><button className="button button-primary" type="submit"><AppIcon icon={Calculator} size={16} />Salvar e calcular financiamento</button></div>
     </form>
   )
 }

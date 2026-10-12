@@ -31,6 +31,8 @@ import type {
 } from '../domain/financing'
 import { formatCurrency } from './format'
 import { strategyLabels } from './FinancingForm'
+import { CalendarCheck, ChartPie, Download, TrendingDown } from 'lucide-react'
+import { AppIcon } from './AppIcon'
 
 function boundary(value: string): number | undefined {
   return value.trim() === '' ? undefined : Number(value)
@@ -69,15 +71,15 @@ function FinancingCharts({ result }: {
   ), [result.comparison.none, scenario])
 
   return (
-    <section>
-      <div className="section-heading chart-section-heading">
-        <div><span className="eyebrow">Evolução do contrato</span><h2>Visualizações</h2></div>
+    <section className="financing-visual-zone">
+      <div className="dashboard-section-heading chart-section-heading">
+        <div><span className="eyebrow">Evolução do contrato</span><h2>Visualizações do financiamento</h2><p>Compare a trajetória da dívida, a composição dos pagamentos e a prestação.</p></div>
         <label className="field chart-strategy-select"><span>Estratégia visualizada</span><select value={strategy} onChange={(event) => setStrategy(event.target.value as VisualizationStrategy)}><option value="reducePayment">Reduzir parcela</option><option value="reduceTerm">Reduzir prazo</option></select></label>
       </div>
-      <div className="chart-grid">
-        <article className="data-card chart-card chart-card-wide">
-          <h3>Saldo devedor</h3>
-          <p className="field-help">Saldo final de cada período no baseline e em {strategyLabels[strategy].toLowerCase()}.</p>
+      <div className="financing-visual-grid">
+        <article className="chart-card">
+          <h3><AppIcon icon={TrendingDown} />Saldo devedor</h3>
+          <p className="field-help">Saldo final de cada período sem amortização extra e em {strategyLabels[strategy].toLowerCase()}.</p>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 12, right: 12, left: 12, bottom: 4 }}>
@@ -86,15 +88,15 @@ function FinancingCharts({ result }: {
                 <YAxis width={72} tickFormatter={(value) => chartCurrency(Number(value))} />
                 <Tooltip formatter={(value) => chartCurrency(Number(value))} labelFormatter={(label) => `Período ${label}`} />
                 <Legend wrapperStyle={{ paddingTop: 10, fontSize: 12 }} />
-                <Line type="monotone" dataKey="baselineBalance" name="Sem amortização" stroke="#6b7b8a" dot={false} strokeWidth={2} connectNulls={false} />
+                <Line type="monotone" dataKey="baselineBalance" name="Sem amortização" stroke="var(--chart-baseline)" dot={false} strokeWidth={2} connectNulls={false} />
                 <Line type="monotone" dataKey="scenarioBalance" name={strategyLabels[strategy]} stroke="var(--brand)" dot={false} strokeWidth={3} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </article>
 
-        <article className="data-card chart-card">
-          <h3>Composição do pagamento</h3>
+        <article className="chart-card">
+          <h3><AppIcon icon={ChartPie} />Composição do pagamento</h3>
           <p className="field-help">Juros, amortização da parcela, aporte e cobranças de {strategyLabels[strategy].toLowerCase()}.</p>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
@@ -104,17 +106,17 @@ function FinancingCharts({ result }: {
                 <YAxis width={72} tickFormatter={(value) => chartCurrency(Number(value))} />
                 <Tooltip formatter={(value) => chartCurrency(Number(value))} labelFormatter={(label) => `Período ${label}`} />
                 <Legend wrapperStyle={{ paddingTop: 10, fontSize: 12 }} />
-                <Bar dataKey="interest" name="Juros" stackId="payment" fill="#d7a93f" />
-                <Bar dataKey="principal" name="Amortização da parcela" stackId="payment" fill="#5f8fb5" />
+                <Bar dataKey="interest" name="Juros" stackId="payment" fill="var(--chart-interest)" />
+                <Bar dataKey="principal" name="Amortização da parcela" stackId="payment" fill="var(--chart-principal)" />
                 <Bar dataKey="extraPayment" name="Aporte" stackId="payment" fill="var(--brand)" />
-                <Bar dataKey="periodicCharges" name="Cobranças" stackId="payment" fill="#94a3b0" />
+                <Bar dataKey="periodicCharges" name="Cobranças" stackId="payment" fill="var(--chart-charge)" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </article>
 
-        <article className="data-card chart-card">
-          <h3>Evolução da prestação</h3>
+        <article className="chart-card">
+          <h3><AppIcon icon={CalendarCheck} />Evolução da prestação</h3>
           <p className="field-help">A linha termina quando o respectivo cenário é quitado.</p>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
@@ -124,7 +126,7 @@ function FinancingCharts({ result }: {
                 <YAxis width={72} tickFormatter={(value) => chartCurrency(Number(value))} />
                 <Tooltip formatter={(value) => chartCurrency(Number(value))} labelFormatter={(label) => `Período ${label}`} />
                 <Legend wrapperStyle={{ paddingTop: 10, fontSize: 12 }} />
-                <Line type="stepAfter" dataKey="baselinePayment" name="Sem amortização" stroke="#6b7b8a" dot={false} strokeWidth={2} connectNulls={false} />
+                <Line type="stepAfter" dataKey="baselinePayment" name="Sem amortização" stroke="var(--chart-baseline)" dot={false} strokeWidth={2} connectNulls={false} />
                 <Line type="stepAfter" dataKey="scenarioPayment" name={strategyLabels[strategy]} stroke="var(--brand)" dot={false} strokeWidth={3} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -202,13 +204,15 @@ function AmortizationTable({ result }: {
   }
 
   return (
-    <section className="data-card">
-      <div className="section-heading"><div><span className="eyebrow">Consulta e exportação</span><h2>Tabela de amortização</h2></div><button type="button" className="button button-secondary" onClick={downloadCsv} disabled={table.error !== null}>Baixar CSV</button></div>
-      <div className="table-controls">
-        <div className="table-scenario-control"><span className="control-label">Estratégia</span><div className="segmented-control"><button type="button" className={scenario === 'none' ? 'active' : ''} onClick={() => setScenario('none')}>Sem amortização</button><button type="button" className={scenario === 'reducePayment' ? 'active' : ''} onClick={() => setScenario('reducePayment')}>Reduzir parcela</button><button type="button" className={scenario === 'reduceTerm' ? 'active' : ''} onClick={() => setScenario('reduceTerm')}>Reduzir prazo</button></div></div>
-        <div><span className="control-label">Visão</span><div className="segmented-control"><button type="button" className={view === 'monthly' ? 'active' : ''} onClick={() => { setView('monthly'); setStart(''); setEnd('') }}>Mensal</button><button type="button" className={view === 'annual' ? 'active' : ''} onClick={() => { setView('annual'); setStart(''); setEnd('') }}>Anual</button></div></div>
-        <label className="field"><span>{view === 'monthly' ? 'Período inicial' : 'Ano inicial'}</span><input type="number" min="1" step="1" value={start} onChange={(event) => setStart(event.target.value)} /></label>
-        <label className="field"><span>{view === 'monthly' ? 'Período final' : 'Ano final'}</span><input type="number" min="1" step="1" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
+    <section className="amortization-analysis-zone">
+      <div className="dashboard-section-heading amortization-analysis-heading"><div><span className="eyebrow">Consulta e exportação</span><h2>Tabela de amortização</h2><p>Escolha o cenário, a granularidade e o intervalo antes de exportar.</p></div><button type="button" className="button button-secondary" onClick={downloadCsv} disabled={table.error !== null}><AppIcon icon={Download} size={16} />Baixar CSV</button></div>
+      <div className="amortization-toolbar">
+        <div className="table-scenario-control"><span className="control-label">Estratégia do cronograma</span><div className="segmented-control"><button type="button" className={scenario === 'none' ? 'active' : ''} onClick={() => setScenario('none')}>Sem amortização</button><button type="button" className={scenario === 'reducePayment' ? 'active' : ''} onClick={() => setScenario('reducePayment')}>Reduzir parcela</button><button type="button" className={scenario === 'reduceTerm' ? 'active' : ''} onClick={() => setScenario('reduceTerm')}>Reduzir prazo</button></div></div>
+        <div className="amortization-filter-row">
+          <div><span className="control-label">Visão</span><div className="segmented-control"><button type="button" className={view === 'monthly' ? 'active' : ''} onClick={() => { setView('monthly'); setStart(''); setEnd('') }}>Mensal</button><button type="button" className={view === 'annual' ? 'active' : ''} onClick={() => { setView('annual'); setStart(''); setEnd('') }}>Anual</button></div></div>
+          <label className="field"><span>{view === 'monthly' ? 'Período inicial' : 'Ano inicial'}</span><input type="number" min="1" step="1" value={start} onChange={(event) => setStart(event.target.value)} /></label>
+          <label className="field"><span>{view === 'monthly' ? 'Período final' : 'Ano final'}</span><input type="number" min="1" step="1" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
+        </div>
       </div>
       {table.error && <div className="alert alert-error">{table.error}</div>}
       {!table.error && (
@@ -242,9 +246,9 @@ export function FinancingLab({ result }: {
   readonly result: CandidateFinancingResult
 }) {
   return (
-    <>
+    <div className="financing-analysis-stack">
       <FinancingCharts result={result} />
       <AmortizationTable result={result} />
-    </>
+    </div>
   )
 }

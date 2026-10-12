@@ -2,9 +2,9 @@
 
 > Documento: PRODUCT_SPEC
 >
-> Revisão do documento: 1.0.0
+> Revisão do documento: 1.0.6
 >
-> Aplicação auditada: 1.1.0
+> Aplicação descrita: 1.2.0 (base auditada 1.1.0 + seção 14.1)
 >
 > Commit base auditado: 63e48ad
 >
@@ -452,6 +452,14 @@ O Laboratório exporta sua tabela ativa em CSV no navegador. Importação e sinc
 
 Esta especificação não fixa CSS, posição exata ou dimensão de componentes.
 
+### 14.1 Release visual da v1.2.0
+
+As decisões implementadas na v1.2.0 estão em [UX_REDESIGN_V1_2.md](UX_REDESIGN_V1_2.md): referência violeta, seleção compacta de até quatro opções nas telas comparativas, métricas proporcionais, destaques objetivos com preservação de empates e apresentação do Ciladômetro. As seções anteriores que mencionam o limite de duas opções descrevem a base v1.1.0; esta seção prevalece para a v1.2.0. O `APPLICATION_GUIDE.md` registra as diferenças implementadas em adendo próprio. Autenticação, garagens por usuário e persistência remota continuam no roadmap.
+
+Diretrizes aprovadas para a v1.2.0 em 2026-10-12: cabeçalhos compactos alinhados; “Minha garagem” enquanto não houver usuário autenticado; “Simular financiamento”; faixa com até quatro veículos visíveis. Com cinco ou mais cadastrados, o quarto cartão vira “+N” e abre os demais, mantendo o painel ao lado do título no desktop. Comparação e Ciladômetro aceitam até quatro opções, enquanto Financiamento permanece unitário. A primeira seleção continua persistida; as demais são locais. A ordem dos veículos permanece estável ao selecionar; os controles usam coluna reservada para checkbox/radio e título legível. O limite máximo é indicado sem contador visual de selecionados; a escolha única do financiamento conserva semântica radio, indicador quadrado e altura estável ao alternar veículos. Os ícones dos parâmetros financeiros são menores que os dos títulos de seção. Resultado operacional e tabela detalhada permanecem na Comparação, sem o fechamento redundante. O tema fica no rodapé da sidebar, também acessível na navegação mobile. O header inclui acesso visual à conta, com estado explícito de autenticação ainda indisponível, até a integração de backend.
+
+O Ciladômetro consolida no card de cada opção a estratégia compacta, empates expansíveis, primeiro período (prestação integral, aporte, cobranças, pagamento financeiro e impacto líquido) e horizonte (impactos médio, maior, menor e acumulado, prazos e totais contratuais). O custo de uso (TCO e economia operacional) permanece em seção inferior separada. Quando há uma opção, os dois cards ocupam a largura útil; com múltiplas opções, usam grid responsivo. O dourado identifica exclusivamente o menor impacto acumulado em uma comparação financeira completa e sem empate, sem significar melhor carro ou economia líquida. Após quitação, o impacto é explicado no custo de uso sem repetir numericamente a economia operacional. Lucide padroniza a iconografia decorativa; “Reduzir parcela” usa `trending-down`. Títulos, textos, sinais e foco continuam comunicando os estados. Cadastro usa cabeçalhos e opções automáticas com linguagem visual compartilhada, mantendo os comportamentos próprios.
+
 ## 15. Escopo
 
 ### 15.1 Implementado na v1.x
@@ -573,3 +581,9 @@ Até essas definições serem aprovadas, funcionalidades dependentes não podem 
 | Revisão | Aplicação auditada | Data | Alterações |
 | --- | --- | --- | --- |
 | 1.0.0 | 1.1.0 (`63e48ad`) | 2026-10-11 | Início da governança formal; correção de escopo, cadastro, TCO econômico, financiamento, estratégias, persistência, responsividade e roadmap; registro dos gaps reais de UI e da lacuna de teste de arredondamento. |
+| 1.0.1 | 1.1.0 (`63e48ad`) | 2026-10-12 | Referência explícita ao RC visual da v1.2 em revisão, sem promover seu comportamento à base publicada. |
+| 1.0.2 | 1.1.0 (`63e48ad`) | 2026-10-12 | Novas decisões do RC: cabeçalhos compactos, seleção de até quatro opções, financiamento unitário, espaço de conta e prestação contratual em destaque no Ciladômetro. |
+| 1.0.3 | Base 1.1.0 (`63e48ad`); RC não publicado | 2026-10-12 | Consolidação de UX e Lucide; controles estáveis, tema na sidebar, formulário compartilhado e propriedade das métricas do Ciladômetro, com dourado reservado ao vencedor calculado. |
+| 1.0.4 | Base 1.1.0 (`63e48ad`); RC não publicado | 2026-10-12 | Refinamento dos seletores, da densidade vertical, do card único do Ciladômetro e da iconografia da estratégia, sem mudança funcional. |
+| 1.0.5 | Base 1.1.0 (`63e48ad`); RC não publicado | 2026-10-12 | Quarto cartão “+N” para cinco ou mais veículos, seletor unitário com indicador quadrado, ícones de parâmetros menores e retirada do fechamento repetido da Comparação. |
+| 1.0.6 | 1.2.0 (`v1.2.0`) | 2026-10-12 | Promoção da revisão visual a release oficial; seção 14.1 passa a definir o limite de quatro opções e a UX vigente. |

@@ -1,5 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useAppState } from '../application/AppStateProvider'
+import { AccountMenu } from './AccountMenu'
+import { CarFront, Gauge, GitCompareArrows, Landmark, Moon, Sun } from 'lucide-react'
+import { AppIcon } from './AppIcon'
 import {
   loadThemePreference,
   oppositeTheme,
@@ -16,7 +19,7 @@ interface AppShellProps {
 }
 
 const areas: readonly { id: AppArea; label: string; description: string }[] = [
-  { id: 'vehicles', label: 'Veículos', description: 'Cadastros e custos' },
+  { id: 'vehicles', label: 'Garagem', description: 'Seus veículos e custos' },
   { id: 'comparison', label: 'Comparação', description: 'TCO lado a lado' },
   { id: 'financing', label: 'Financiamento', description: 'Contrato e amortizações' },
   { id: 'decision', label: 'Ciladômetro', description: 'Decisão final' },
@@ -31,8 +34,6 @@ export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
   const [theme, setTheme] = useState<ThemeMode>(() => (
     loadThemePreference(window.localStorage, prefersDarkTheme())
   ))
-  const activeAreaDetails = areas.find((area) => area.id === activeArea)
-    ?? areas[0]
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -44,18 +45,31 @@ export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">BL</div>
+          <div className="brand-mark" aria-hidden="true">
+            <img src={`${import.meta.env.BASE_URL}brand/logo-estrada-b.png`} alt="" />
+          </div>
           <div><strong>BuyCar Lab - BR</strong><span>É cilada ou não?</span></div>
         </div>
         <nav className="main-nav" aria-label="Áreas principais">
-          {areas.map((area, index) => (
-            <button key={area.id} className={activeArea === area.id ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => onNavigate(area.id)}>
-              <span className="nav-index">0{index + 1}</span>
+          {areas.map((area) => (
+            <button key={area.id} className={activeArea === area.id ? 'nav-item nav-item-active' : 'nav-item'} aria-current={activeArea === area.id ? 'page' : undefined} onClick={() => onNavigate(area.id)}>
+              <span className="nav-icon"><AppIcon icon={{ vehicles: CarFront, comparison: GitCompareArrows, financing: Landmark, decision: Gauge }[area.id]} size={24} /></span>
               <span><strong>{area.label}</strong><small>{area.description}</small></span>
             </button>
           ))}
         </nav>
         <footer className="sidebar-footer">
+          <button
+            type="button"
+            className="theme-toggle sidebar-theme-toggle"
+            aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+            aria-pressed={theme === 'dark'}
+            onClick={() => setTheme((current) => oppositeTheme(current))}
+          >
+            <AppIcon icon={Sun} />
+            <span className="theme-toggle-track" aria-hidden="true"><span className="theme-toggle-thumb" /></span>
+            <AppIcon icon={Moon} />
+          </button>
           <span>Versão {__APP_VERSION__}</span>
           <button
             className="clear-data"
@@ -72,23 +86,8 @@ export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
 
       <div className="workspace">
         <header className="workspace-topbar">
-          <div className="workspace-context">
-            <span className="eyebrow">Área atual</span>
-            <strong>{activeAreaDetails.label}</strong>
-          </div>
           <div className="topbar-actions">
-            <button
-              type="button"
-              className="theme-toggle"
-              aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-              aria-pressed={theme === 'dark'}
-              onClick={() => setTheme((current) => oppositeTheme(current))}
-            >
-              <span className="theme-toggle-track" aria-hidden="true">
-                <span className="theme-toggle-thumb" />
-              </span>
-              <span>{theme === 'dark' ? 'Modo claro' : 'Modo escuro'}</span>
-            </button>
+            <AccountMenu />
           </div>
         </header>
 

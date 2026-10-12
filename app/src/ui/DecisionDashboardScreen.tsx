@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   calculateDecisionOptionsComparison,
   type ComparedDecisionOption,
@@ -7,6 +7,7 @@ import {
 import { useAppState } from '../application/AppStateProvider'
 import {
   initializeOptionSelection,
+  MAX_DASHBOARD_OPTIONS,
   reconcileOptionSelection,
 } from '../application/multiVehicleSelection'
 import type { ExtraPaymentStrategy } from '../domain/financing'
@@ -14,11 +15,14 @@ import { strategyLabels } from './FinancingForm'
 import {
   formatCostPerKm,
   formatCurrency,
-  formatOperationalComparisonLabel,
-  formatOperationalHeadline,
   formatSignedMonthlyCurrency,
 } from './format'
 import { OptionMultiSelect } from './OptionMultiSelect'
+import { OutcomeBadge } from './OutcomeBadge'
+import { findUniqueLowestMetricId } from '../application/resultHighlights'
+import { Activity, CirclePlus, PiggyBank, Receipt, Scale, Sigma, Target, Wallet } from 'lucide-react'
+import { AppIcon } from './AppIcon'
+import { SectionHeader } from './SectionHeader'
 
 function cashImpactMeaning(value: number): string {
   if (value > 0) return 'Custo adicional'
@@ -26,9 +30,10 @@ function cashImpactMeaning(value: number): string {
   return 'Impacto neutro'
 }
 
-function CashImpactValue({ value, monthly = true }: {
+function CashImpactValue({ value, monthly = true, showMeaning = true }: {
   readonly value: number
   readonly monthly?: boolean
+  readonly showMeaning?: boolean
 }) {
   const formatted = monthly
     ? formatSignedMonthlyCurrency(value)
@@ -38,195 +43,114 @@ function CashImpactValue({ value, monthly = true }: {
         ? `- ${formatCurrency(Math.abs(value))}`
         : formatCurrency(0)
   return (
-    <span className="cash-impact-value">
+    <span className={`cash-impact-value ${value < 0 ? 'cash-impact-saving' : value > 0 ? 'cash-impact-cost' : ''}`}>
       <strong>{formatted}</strong>
-      <small>{cashImpactMeaning(value)}</small>
+      {showMeaning && <small>{cashImpactMeaning(value)}</small>}
     </span>
   )
 }
 
-function strategyRecommendationLabel(
-  strategies: readonly ExtraPaymentStrategy[],
-): string {
-  if (strategies.length === 1) {
-    return strategyLabels[strategies[0]]
-  }
-  return `Empate: ${strategies.map((strategy) => strategyLabels[strategy]).join(' · ')}`
-}
-
-function OptionCard({ option, children, className = '' }: {
-  readonly option: ComparedDecisionOption
-  readonly children: ReactNode
-  readonly className?: string
+function StrategyRecommendation({ strategies }: {
+  readonly strategies: readonly ExtraPaymentStrategy[]
 }) {
+  if (strategies.length === 1) {
+    return <div className="decision-recommendation"><span><AppIcon icon={Target} />Estratégia de amortização</span><strong>{strategyLabels[strategies[0]]}</strong></div>
+  }
   return (
-    <article className={`data-card decision-comparison-card ${className}`}>
-      <span className="eyebrow">Opção de troca</span>
-      <h3>{option.result.comparison.candidate.vehicle.name}</h3>
-      {children}
-    </article>
+    <div className="decision-recommendation">
+      <span><AppIcon icon={Target} />Estratégia de amortização</span>
+      <strong>Empate técnico entre {strategies.length} estratégias</strong>
+      <details className="decision-tied-strategies">
+        <summary>Ver estratégias empatadas</summary>
+        <ul>{strategies.map((strategy) => <li key={strategy}>{strategyLabels[strategy]}</li>)}</ul>
+      </details>
+    </div>
   )
 }
 
 function MissingFinancing() {
   return (
-    <div className="alert alert-info decision-missing-financing">
-      Configure o financiamento deste veículo para completar a análise financeira.
+    <div className="decision-missing-financing">
+      <strong>Financiamento não configurado</strong>
+      <span>Configure o financiamento deste veículo para calcular o impacto no bolso.</span>
     </div>
   )
 }
 
-function OperationalCard({ result }: {
+function OperationalCard({ result, winner }: {
   readonly result: DecisionDashboardResult
+  readonly winner: boolean
 }) {
   const optionName = result.comparison.candidate.vehicle.name
   const currentName = result.comparison.current.vehicle.name
   const isSaving = result.operationalSavingsMonthly >= 0
   return (
-    <article className={`insight-card ${isSaving ? 'insight-positive' : 'insight-negative'}`}>
-      <span className="eyebrow">{optionName}</span>
-      <h3>{formatOperationalHeadline(optionName, result.operationalSavingsMonthly)}</h3>
-      <dl className="metric-list">
-        <div><dt>TCO mensal do {currentName}</dt><dd>{formatCurrency(result.currentMonthlyCashTco)}</dd></div>
-        <div><dt>TCO mensal do {optionName}</dt><dd>{formatCurrency(result.optionMonthlyCashTco)}</dd></div>
-        <div><dt>{isSaving ? 'Economia mensal' : 'Custo adicional mensal'}</dt><dd>{formatCurrency(Math.abs(result.operationalSavingsMonthly))}</dd></div>
-        <div><dt>{isSaving ? 'Economia anual' : 'Custo adicional anual'}</dt><dd>{formatCurrency(Math.abs(result.operationalSavingsAnnual))}</dd></div>
+    <article className={`decision-topic-option ${winner ? 'outcome-card-winner' : ''}`}>
+      {winner && <OutcomeBadge>Menor custo de uso</OutcomeBadge>}
+      <div className="decision-topic-option-heading"><span>Opção de troca</span><h3>{optionName}</h3></div>
+      <div className={`decision-operational-callout ${isSaving ? 'is-saving' : 'is-cost'}`}>
+        <span>{isSaving ? 'Economia mensal' : 'Custo adicional mensal'}</span>
+        <strong>{formatCurrency(Math.abs(result.operationalSavingsMonthly))}</strong>
+        <small>em relação ao {currentName}</small>
+        <p className="after-payoff-context">Após a quitação, sem parcelas do financiamento.</p>
+      </div>
+      <dl className="decision-compact-metrics">
+        <div><dt>Custo de uso mensal</dt><dd>{formatCurrency(result.optionMonthlyCashTco)}</dd></div>
+        <div><dt>{isSaving ? 'Economia anual' : 'Custo anual adicional'}</dt><dd>{formatCurrency(Math.abs(result.operationalSavingsAnnual))}</dd></div>
         <div><dt>Diferença por km</dt><dd>{formatCostPerKm(Math.abs(result.operationalSavingsPerKm))}</dd></div>
+        <div><dt>TCO da referência</dt><dd>{formatCurrency(result.currentMonthlyCashTco)}/mês</dd></div>
       </dl>
     </article>
   )
 }
 
-function SummaryCard({ option }: { readonly option: ComparedDecisionOption }) {
-  const result = option.result
-  const recommended = result.recommendedStrategy
-  const recommendation = result.recommendedStrategies
-  const horizon = option.commonHorizonCashImpact
-
-  return (
-    <OptionCard option={option} className="decision-summary-card">
-      {recommended === null || recommendation === null || horizon === null ? (
-        <>
-          <dl className="metric-list">
-            <div><dt>{result.operationalSavingsMonthly >= 0 ? 'Economia operacional mensal' : 'Custo operacional adicional mensal'}</dt><dd>{formatCurrency(Math.abs(result.operationalSavingsMonthly))}</dd></div>
-            <div><dt>Custo mensal após quitação</dt><dd>{formatCurrency(result.optionMonthlyCashTco)}</dd></div>
-          </dl>
-          <MissingFinancing />
-        </>
-      ) : (
-        <dl className="metric-list">
-          <div><dt>Estratégia recomendada</dt><dd>{strategyRecommendationLabel(recommendation)}</dd></div>
-          <div><dt>Impacto no 1º mês</dt><dd><CashImpactValue value={horizon.firstPeriodImpact} /></dd></div>
-          <div><dt>Impacto médio no horizonte</dt><dd><CashImpactValue value={horizon.averageImpact} /></dd></div>
-          <div><dt>Impacto total no bolso</dt><dd><CashImpactValue value={horizon.cumulativeImpact} monthly={false} /></dd></div>
-          <div><dt>Custo mensal após quitação</dt><dd>{formatCurrency(result.optionMonthlyCashTco)}</dd></div>
-          <div><dt>Prazo efetivo</dt><dd>{recommended.scenario.effectiveTermMonths} meses</dd></div>
-          <div><dt>Total desembolsado</dt><dd>{formatCurrency(recommended.scenario.totalDisbursed)}</dd></div>
-          <div><dt>Juros totais</dt><dd>{formatCurrency(recommended.scenario.totalInterest)}</dd></div>
-        </dl>
-      )}
-    </OptionCard>
-  )
-}
-
-function MainScenarioCard({ option }: { readonly option: ComparedDecisionOption }) {
-  const result = option.result
-  const metrics = result.recommendedStrategy
-  if (metrics === null) {
-    return <OptionCard option={option}><MissingFinancing /></OptionCard>
-  }
-  return (
-    <article className={`decision-hero decision-comparison-card ${metrics.firstPeriodNetDisbursementImpact <= 0 ? 'decision-hero-saving' : ''}`}>
-      <div className="decision-hero-primary">
-        <h3>{result.comparison.candidate.vehicle.name}</h3>
-        <span className="decision-primary-label">Impacto no bolso no 1º mês</span>
-        <CashImpactValue value={metrics.firstPeriodNetDisbursementImpact} />
-      </div>
-      <div className="decision-hero-metrics">
-        <div><span>{formatOperationalComparisonLabel(result.comparison.current.vehicle.name, result.operationalSavingsMonthly)}</span><strong>{formatCurrency(Math.abs(result.operationalSavingsMonthly))}/mês</strong></div>
-        <div><span>Parcela inicial</span><strong>{formatCurrency(metrics.firstPeriodContractualPayment)}</strong></div>
-        <div><span>Aporte no 1º mês</span><strong>{formatCurrency(metrics.firstPeriodExtraPayment)}</strong></div>
-        <div><span>Saída do financiamento no 1º mês</span><strong>{formatCurrency(metrics.firstPeriodTotalPayment)}</strong></div>
-        <div><span>Custo mensal depois de quitar</span><strong>{formatCurrency(result.optionMonthlyCashTco)}/mês</strong></div>
-      </div>
-    </article>
-  )
-}
-
-function FirstPeriodCard({ option }: { readonly option: ComparedDecisionOption }) {
-  const result = option.result
-  const metrics = result.recommendedStrategy
-  if (metrics === null) {
-    return <OptionCard option={option}><MissingFinancing /></OptionCard>
-  }
-  return (
-    <OptionCard option={option}>
-      <dl className="metric-list">
-        <div><dt>Prestação contratual</dt><dd>{formatCurrency(metrics.firstPeriodContractualPayment)}</dd></div>
-        <div><dt>Aporte aplicado</dt><dd>{formatCurrency(metrics.firstPeriodExtraPayment)}</dd></div>
-        <div><dt>Cobranças</dt><dd>{formatCurrency(metrics.firstPeriodPeriodicCharges)}</dd></div>
-        <div><dt>Pagamento total</dt><dd>{formatCurrency(metrics.firstPeriodTotalPayment)}</dd></div>
-        <div><dt>{formatOperationalComparisonLabel(result.comparison.current.vehicle.name, result.operationalSavingsMonthly)}</dt><dd>{formatCurrency(Math.abs(result.operationalSavingsMonthly))}</dd></div>
-        <div><dt>Impacto líquido real</dt><dd><CashImpactValue value={metrics.firstPeriodNetDisbursementImpact} /></dd></div>
-      </dl>
-    </OptionCard>
-  )
-}
-
-function RealFlowCard({ option }: { readonly option: ComparedDecisionOption }) {
-  const result = option.result
-  const metrics = result.recommendedStrategy
-  const horizon = option.commonHorizonCashImpact
-  if (metrics === null || horizon === null) {
-    return <OptionCard option={option}><MissingFinancing /></OptionCard>
-  }
-  return (
-    <OptionCard option={option}>
-      <dl className="metric-list">
-        <div><dt>Impacto no 1º período</dt><dd><CashImpactValue value={horizon.firstPeriodImpact} /></dd></div>
-        <div><dt>Impacto médio mensal</dt><dd><CashImpactValue value={horizon.averageImpact} /></dd></div>
-        <div><dt>Maior impacto mensal</dt><dd><CashImpactValue value={horizon.maximumImpact} /></dd></div>
-        <div><dt>Menor impacto mensal</dt><dd><CashImpactValue value={horizon.minimumImpact} /></dd></div>
-        <div><dt>Impacto após quitação</dt><dd><CashImpactValue value={horizon.afterPayoffImpact} /></dd></div>
-        <div><dt>Impacto total em {horizon.horizonMonths} meses</dt><dd><CashImpactValue value={horizon.cumulativeImpact} monthly={false} /></dd></div>
-      </dl>
-    </OptionCard>
-  )
-}
-
-function ComparisonHighlights({ comparison }: {
-  readonly comparison: ReturnType<typeof calculateDecisionOptionsComparison>
+function SummaryCard({ option, winner }: {
+  readonly option: ComparedDecisionOption
+  readonly winner: boolean
 }) {
-  if (
-    comparison.options.length !== 2
-    || comparison.comparisonHorizonMonths === null
-    || comparison.lowestTotalImpactOptionIds === null
-    || comparison.lowestFirstPeriodImpactOptionIds === null
-  ) {
-    return null
-  }
-  const nameFor = (id: string) => comparison.options.find(
-    (option) => option.result.comparison.candidate.id === id,
-  )?.result.comparison.candidate.vehicle.name ?? id
-  const totalNames = comparison.lowestTotalImpactOptionIds.map(nameFor)
-  const firstNames = comparison.lowestFirstPeriodImpactOptionIds.map(nameFor)
+  const result = option.result
+  const recommendation = result.recommendedStrategies
+  const metrics = result.recommendedStrategy
+  const horizon = option.commonHorizonCashImpact
   return (
-    <section className="data-card decision-comparison-highlights">
-      <span className="eyebrow">Leitura objetiva</span>
-      <h2>Comparação no mesmo horizonte</h2>
-      <div className="decision-highlights">
-        <div>
-          <span>Menor impacto total no bolso</span>
-          <strong>{totalNames.length > 1 ? `Empate: ${totalNames.join(' · ')}` : totalNames[0]}</strong>
-          <small>{totalNames.length > 1 ? `Impactos equivalentes em ${comparison.comparisonHorizonMonths} meses.` : `${formatCurrency(comparison.totalImpactDifference ?? 0)} menos no horizonte de ${comparison.comparisonHorizonMonths} meses.`}</small>
-        </div>
-        <div>
-          <span>Menor impacto no 1º mês</span>
-          <strong>{firstNames.length > 1 ? `Empate: ${firstNames.join(' · ')}` : firstNames[0]}</strong>
-          <small>{firstNames.length > 1 ? 'Impactos iniciais equivalentes.' : `${formatCurrency(comparison.firstPeriodImpactDifference ?? 0)} menos no primeiro mês.`}</small>
-        </div>
-      </div>
-    </section>
+    <article className={`decision-hero-option decision-result-card decision-consolidated-card ${winner ? 'financial-winner' : ''}`}>
+      {winner && <OutcomeBadge tone="decision">Menor impacto total no bolso</OutcomeBadge>}
+      <div className="decision-hero-option-heading"><div><span>Opção analisada</span><h3>{result.comparison.candidate.vehicle.name}</h3></div></div>
+      {recommendation === null || metrics === null || horizon === null ? <MissingFinancing /> : (
+        <>
+          <StrategyRecommendation strategies={recommendation} />
+          <div className="decision-primary-impact">
+            <span><AppIcon icon={Wallet} />Impacto líquido real no 1º mês</span>
+            <CashImpactValue value={metrics.firstPeriodNetDisbursementImpact} />
+          </div>
+          <div className="decision-card-group">
+            <h4>Composição do primeiro mês</h4>
+            <dl className="decision-consolidated-metrics">
+              <div><dt><AppIcon icon={Receipt} size={16} />Parcela contratual</dt><dd>{formatCurrency(metrics.firstPeriodContractualPayment)}</dd></div>
+              <div><dt><AppIcon icon={CirclePlus} size={16} />Aporte aplicado</dt><dd>{formatCurrency(metrics.firstPeriodExtraPayment)}</dd></div>
+              <div><dt><AppIcon icon={Receipt} size={16} />Cobranças</dt><dd>{formatCurrency(metrics.firstPeriodPeriodicCharges)}</dd></div>
+              <div><dt><AppIcon icon={PiggyBank} size={16} />{result.operationalSavingsMonthly >= 0 ? 'Economia operacional' : 'Custo operacional adicional'}</dt><dd>{formatCurrency(Math.abs(result.operationalSavingsMonthly))}</dd></div>
+              <div className="decision-payment-total"><dt>Pagamento financeiro</dt><dd>{formatCurrency(metrics.firstPeriodTotalPayment)}</dd></div>
+            </dl>
+          </div>
+          <div className="decision-card-group">
+            <h4>No horizonte de {horizon.horizonMonths} meses</h4>
+            <div className="horizon-indicator-grid">
+              <div><span><AppIcon icon={Activity} size={16} />Impacto médio mensal</span><CashImpactValue value={horizon.averageImpact} showMeaning={false} /></div>
+              <div><span>Maior impacto</span><CashImpactValue value={horizon.maximumImpact} showMeaning={false} /></div>
+              <div><span>Menor impacto</span><CashImpactValue value={horizon.minimumImpact} showMeaning={false} /></div>
+              <div className="horizon-total"><span><AppIcon icon={Sigma} size={16} />Impacto acumulado</span><CashImpactValue value={horizon.cumulativeImpact} monthly={false} showMeaning={false} /></div>
+            </div>
+          </div>
+          <dl className="decision-financing-strip">
+            <div><dt>Prazo original</dt><dd>{metrics.scenario.originalTermMonths} meses</dd></div>
+            <div><dt>Prazo efetivo</dt><dd>{metrics.scenario.effectiveTermMonths} meses</dd></div>
+            <div><dt>Total desembolsado</dt><dd>{formatCurrency(metrics.scenario.totalDisbursed)}</dd></div>
+            <div><dt>Juros totais</dt><dd>{formatCurrency(metrics.scenario.totalInterest)}</dd></div>
+          </dl>
+        </>
+      )}
+    </article>
   )
 }
 
@@ -248,6 +172,7 @@ export function DecisionDashboardScreen() {
       current,
       availableIds,
       persistedId,
+      MAX_DASHBOARD_OPTIONS,
     ))
   }, [availableIds, persistedId])
 
@@ -268,19 +193,25 @@ export function DecisionDashboardScreen() {
       : 'Não foi possível calcular o Ciladômetro'
   }
   const columnsClass = comparison?.options.length === 1
-    ? 'decision-comparison-grid decision-comparison-grid-single'
-    : 'decision-comparison-grid'
+    ? 'decision-option-grid decision-option-grid-single'
+    : 'decision-option-grid'
+  const lowestOperationalId = comparison ? findUniqueLowestMetricId([
+    { id: state.currentVehicle.id, value: comparison.options[0]?.result.currentMonthlyCashTco ?? NaN },
+    ...comparison.options.map((option) => ({ id: option.result.comparison.candidate.id, value: option.result.optionMonthlyCashTco })),
+  ]) : null
+  const totalWinnerId = comparison && comparison.options.length >= 2 && comparison.lowestTotalImpactOptionIds?.length === 1
+    ? comparison.lowestTotalImpactOptionIds[0] : null
 
   return (
-    <div className="screen-stack decision-dashboard">
-      <header className="page-header">
+    <div className="screen-stack decision-dashboard decision-dashboard-v2">
+      <header className="page-header decision-dashboard-header">
         <div>
           <span className="eyebrow">Decisão final</span>
           <h1>Ciladômetro</h1>
-          <p>Compare o impacto financeiro real das opções em relação ao seu veículo atual.</p>
+          <p>Financiamento agora. Custo de uso após a quitação.</p>
         </div>
         <OptionMultiSelect
-          label="Veículos analisados"
+          label="Opções para analisar"
           candidates={state.candidates}
           selectedIds={optionIds}
           error={selectionError}
@@ -298,42 +229,25 @@ export function DecisionDashboardScreen() {
       {error && <div className="alert alert-error">{error}</div>}
       {comparison && (
         <>
-          <section>
-            <div className="section-heading"><div><span className="eyebrow">Referência</span><h2>Comparação com {state.currentVehicle.vehicle.name}</h2></div></div>
+          <section className="decision-command-center">
+            <div className="decision-command-heading">
+              <p>Comparação com <strong className="reference-text">{state.currentVehicle.vehicle.name}</strong></p>
+              {comparison.comparisonHorizonMonths && <span className="decision-horizon-badge">Horizonte comum · {comparison.comparisonHorizonMonths} meses</span>}
+            </div>
+            <SectionHeader icon={Scale} title="Decisão financeira" level="h2" />
+            <details className="decision-criterion"><summary>Como ler esta análise</summary><p>O impacto reúne pagamentos financeiros menos economia operacional. Entrada não financiada, valor residual e revenda não entram automaticamente neste indicador.</p></details>
             <div className={columnsClass}>
-              {comparison.options.map((option) => <SummaryCard key={option.result.comparison.candidate.id} option={option} />)}
+              {comparison.options.map((option) => <SummaryCard key={option.result.comparison.candidate.id} option={option} winner={totalWinnerId === option.result.comparison.candidate.id} />)}
             </div>
           </section>
 
-          <ComparisonHighlights comparison={comparison} />
-
-          <section>
-            <div className="section-heading"><div><span className="eyebrow">Custo de uso</span><h2>Economia operacional</h2></div></div>
+          <section className="decision-topic-board">
+            <SectionHeader icon={PiggyBank} title="Quanto custa manter cada carro" level="h2" />
             <div className={columnsClass}>
-              {comparison.options.map((option) => <OperationalCard key={option.result.comparison.candidate.id} result={option.result} />)}
+              {comparison.options.map((option) => <OperationalCard key={option.result.comparison.candidate.id} result={option.result} winner={lowestOperationalId === option.result.comparison.candidate.id} />)}
             </div>
           </section>
 
-          <section>
-            <div className="section-heading"><div><span className="eyebrow">Impacto financeiro</span><h2>Cenário recomendado</h2></div></div>
-            <div className={columnsClass}>
-              {comparison.options.map((option) => <MainScenarioCard key={option.result.comparison.candidate.id} option={option} />)}
-            </div>
-          </section>
-
-          <section>
-            <div className="section-heading"><div><span className="eyebrow">Movimento de caixa</span><h2>Primeiro período</h2></div></div>
-            <div className={columnsClass}>
-              {comparison.options.map((option) => <FirstPeriodCard key={option.result.comparison.candidate.id} option={option} />)}
-            </div>
-          </section>
-
-          <section>
-            <div className="section-heading"><div><span className="eyebrow">Horizonte da análise</span><h2>Fluxo real durante o financiamento</h2></div></div>
-            <div className={columnsClass}>
-              {comparison.options.map((option) => <RealFlowCard key={option.result.comparison.candidate.id} option={option} />)}
-            </div>
-          </section>
         </>
       )}
     </div>

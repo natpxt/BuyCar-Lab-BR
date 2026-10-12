@@ -6,6 +6,8 @@ import {
 } from '../application/tcoBreakdown'
 import type { Vehicle } from '../domain/vehicle'
 import { formatCurrency } from './format'
+import { Calculator, FileText, Fuel, IdCard, ShieldCheck, TrendingDown, Wrench, Zap } from 'lucide-react'
+import { AppIcon } from './AppIcon'
 
 type BreakdownView = 'monthly' | 'annual'
 
@@ -20,6 +22,8 @@ const componentLabels: Readonly<Record<TcoBreakdownComponent, string>> = {
   depreciation: 'Depreciação',
   economicTco: 'TCO econômico',
 }
+
+const componentIcons = { fuel: Fuel, electricity: Zap, maintenance: Wrench, insurance: ShieldCheck, propertyTax: FileText, licensing: IdCard, cashTco: Calculator, depreciation: TrendingDown, economicTco: Calculator }
 
 function DifferenceValue({ value }: { readonly value: number }) {
   if (value > 0) {
@@ -42,25 +46,25 @@ export function TcoBreakdownTable({ current, options }: {
   )
 
   return (
-    <section className="data-card">
-      <div className="section-heading">
+    <section className="data-card tco-breakdown-board">
+      <div className="section-heading tco-breakdown-heading">
         <div><span className="eyebrow">Composição do TCO</span><h2>Comparação detalhada dos custos</h2></div>
         <div className="segmented-control compact-segmented" aria-label="Periodicidade do detalhamento">
-          <button type="button" className={view === 'monthly' ? 'active' : ''} onClick={() => setView('monthly')}>Mensal</button>
-          <button type="button" className={view === 'annual' ? 'active' : ''} onClick={() => setView('annual')}>Anual</button>
+          <button type="button" className={view === 'monthly' ? 'active' : ''} aria-pressed={view === 'monthly'} onClick={() => setView('monthly')}>Mensal</button>
+          <button type="button" className={view === 'annual' ? 'active' : ''} aria-pressed={view === 'annual'} onClick={() => setView('annual')}>Anual</button>
         </div>
       </div>
-      <p className="field-help">Cada diferença segue veículo atual menos a respectiva opção de troca. Valor positivo indica economia.</p>
+      <p className="field-help">Diferença = veículo atual menos opção de troca. Valor positivo indica economia operacional.</p>
       <div className="table-scroll tco-breakdown-table">
         <table>
           <thead>
             <tr>
-              <th>Componente</th>
-              <th>{current.name}</th>
+              <th scope="col">Componente</th>
+              <th scope="col" className="reference-text">{current.name}</th>
               {comparison.options.map((option, optionIndex) => (
                 <Fragment key={`${option.vehicle.name}-${optionIndex}`}>
-                  <th>{option.vehicle.name}</th>
-                  <th>Dif. {option.vehicle.name}</th>
+                  <th scope="col">{option.vehicle.name}</th>
+                  <th scope="col">{options.length === 1 ? 'Diferença' : <>Diferença<br /><small>{option.vehicle.name}</small></>}</th>
                 </Fragment>
               ))}
             </tr>
@@ -69,19 +73,28 @@ export function TcoBreakdownTable({ current, options }: {
             {tcoBreakdownOrder.map((component, rowIndex) => {
               const currentValue = comparison.current[component][view]
               return (
-                <tr key={component} className={component === 'cashTco' || component === 'economicTco' ? 'tco-total-row' : ''}>
-                  <td>{componentLabels[component]}</td>
-                  <td>{comparison.current[component].applicable ? formatCurrency(currentValue) : '—'}</td>
-                  {comparison.options.map((option, optionIndex) => {
-                    const row = option.rows[rowIndex]
-                    return (
-                      <Fragment key={`${option.vehicle.name}-${optionIndex}`}>
-                        <td>{row.option.applicable ? formatCurrency(row.option[view]) : '—'}</td>
-                        <td>{!row.current.applicable && !row.option.applicable ? '—' : <DifferenceValue value={row.difference[view]} />}</td>
-                      </Fragment>
-                    )
-                  })}
-                </tr>
+                <Fragment key={component}>
+                  {(component === 'fuel' || component === 'cashTco') && (
+                    <tr className="tco-category-row">
+                      <th scope="rowgroup" colSpan={2 + comparison.options.length * 2}>
+                        {component === 'fuel' ? 'Custos operacionais' : 'Totais e visão econômica'}
+                      </th>
+                    </tr>
+                  )}
+                  <tr className={component === 'cashTco' || component === 'economicTco' ? 'tco-total-row' : ''}>
+                    <th scope="row"><span className="table-component-label"><AppIcon icon={componentIcons[component]} size={16} />{componentLabels[component]}</span></th>
+                    <td>{comparison.current[component].applicable ? formatCurrency(currentValue) : '—'}</td>
+                    {comparison.options.map((option, optionIndex) => {
+                      const row = option.rows[rowIndex]
+                      return (
+                        <Fragment key={`${option.vehicle.name}-${optionIndex}`}>
+                          <td>{row.option.applicable ? formatCurrency(row.option[view]) : '—'}</td>
+                          <td>{!row.current.applicable && !row.option.applicable ? '—' : <DifferenceValue value={row.difference[view]} />}</td>
+                        </Fragment>
+                      )
+                    })}
+                  </tr>
+                </Fragment>
               )
             })}
           </tbody>

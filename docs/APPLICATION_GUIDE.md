@@ -1,12 +1,12 @@
 # BuyCar Lab - BR — Guia Funcional da Aplicação
 
-> Especificação funcional do comportamento atual do sistema
+> Base auditada v1.1.0 com adendo as-built da v1.2.0
 
 > Documento: APPLICATION_GUIDE
 >
-> Revisão do documento: 1.0.0
+> Revisão do documento: 1.0.5
 >
-> Aplicação auditada: 1.1.0
+> Aplicação descrita: 1.2.0 (base auditada 1.1.0 + adendo)
 >
 > Commit base auditado: 63e48ad
 >
@@ -25,7 +25,22 @@ Este é o documento descritivo/as-built: explica arquitetura, persistência, arq
 
 Quando a implementação divergir de uma regra normativa, este guia deve registrar um gap; não deve presumir que o código revogou a regra. Decisões sem norma suficiente são registradas como abertas, sem inferência.
 
-Este documento descreve o comportamento efetivamente implementado no BuyCar Lab - BR no commit base auditado `63e48ad`, complementado pelos testes automatizados dessa base e sempre sob a governança acima. Alterações não commitadas posteriores não são promovidas a comportamento publicado da v1.1.0.
+As seções numeradas preservam a auditoria da v1.1.0 no commit `63e48ad`. O adendo seguinte registra as diferenças implementadas na v1.2.0; referências a duas opções nas seções históricas continuam descrevendo somente a base v1.1.0.
+
+## Adendo as-built — v1.2.0
+
+Validado em 2026-10-12 e publicado na branch `main` como v1.2.0. As seções numeradas abaixo preservam a descrição da base auditada `63e48ad`; este adendo identifica o comportamento acrescentado ou alterado pela v1.2.0.
+
+- A área de cadastro é apresentada como **Garagem**, com título **Minha garagem**. Não há usuário autenticado nem nome pessoal disponível.
+- Comparação e Ciladômetro permitem **até quatro opções de troca** contra o mesmo veículo atual. Até quatro cadastrados, o seletor mostra todos; com cinco ou mais, três veículos e um cartão “+N” aparecem na faixa do cabeçalho, sem deslocar o painel para baixo no desktop. “+N” abre os demais, inclusive a indicação acessível de selecionados ocultos. A primeira seleção continua persistida; as outras permanecem locais a cada tela e são reconciliadas com os registros existentes. Uma quinta seleção é recusada com mensagem explícita. A base v1.1.0 era limitada a duas opções.
+- **Simular financiamento** mantém um veículo por vez, agora selecionado por botões de escolha única. A configuração e os resultados continuam sendo salvos pelo comando existente; não há recálculo automático de rascunhos.
+- No Ciladômetro, cada opção reúne estratégia, primeiro mês, horizonte e dados contratuais em um card financeiro consolidado. A seção **Quanto custa manter cada carro** fica abaixo, com TCO e economia operacional. A **prestação contratual do 1º mês**, o **desembolso financeiro do 1º mês** e o **impacto no bolso** usam os campos já derivados em `application/decisionDashboard.ts`; média, extremos, acumulado, prazos e totais continuam visíveis no mesmo card. O card único ocupa a largura da seção. Empates preservam o detalhamento expansível; ausência de contrato aparece como “Financiamento não configurado”. Dourado destaca somente o vencedor financeiro calculado para a comparação completa e sem empate. Essa classificação não significa economia líquida nem custo econômico integral da compra.
+- O header remove a repetição de “Área atual” e inclui um menu visual **Entrar / Sua conta**. Esse menu informa que login ainda não está disponível; não autentica, não cria conta nem altera a persistência. Nome, foto e título personalizado da garagem aguardam a integração futura.
+- TCO, PRICE, aportes, cobranças, recomendações, schedules, CSV e schema de persistência mantêm suas regras. A ampliação da seleção é uma mudança funcional de apresentação, protegida por testes de limite, reconciliação e comparação em horizonte comum.
+- A consolidação posterior mantém a ordem dos veículos no seletor ao alternar checkbox/radio. O limite de quatro e a escolha única não foram reimplementados. A indicação do limite permanece no subtítulo; o contador visual redundante foi removido. Os cartões mantêm altura mínima de toque e nomes quebram sem deslocar a seleção. O radio do Financiamento usa indicador quadrado sem perder sua semântica. Os ícones dos parâmetros do contrato foram reduzidos para 16 px; os cabeçalhos preservam sua escala. A Comparação mantém Resultado operacional e tabela detalhada, removendo a seção final “Diferenças consolidadas”, que repetia a leitura operacional. O tema usa o mesmo estado e chave, agora no rodapé da sidebar; a navegação mobile expõe as quatro áreas. `lucide-react` 1.55.0 fornece somente os ícones importados, com traço 1,75 e tamanho 16/20/24 px, por `ui/AppIcon.tsx`. “Reduzir parcela” usa o ícone `trending-down` no resumo e na comparação das estratégias.
+- `ui/SectionHeader.tsx` padroniza os quatro cabeçalhos do cadastro e os grupos financeiros; `ui/CheckboxOption.tsx` compartilha apresentação entre cópia de km, IPVA automático e licenciamento padrão. As funções de formulário, valores herdados, inferência, overrides e validações permanecem intactos. O resumo financeiro informa que corresponde ao último cálculo e exige salvar para atualização.
+
+Os detalhes visuais e a validação da v1.2.0 estão em [UX_REDESIGN_V1_2.md](UX_REDESIGN_V1_2.md). A identidade visual e o logo aprovado estão em [VISUAL_IDENTITY.md](VISUAL_IDENTITY.md).
 
 ## 1. Visão geral
 
@@ -876,3 +891,8 @@ Futuras alterações não devem quebrar estas regras confirmadas:
 | Revisão | Aplicação auditada | Data | Alterações |
 | --- | --- | --- | --- |
 | 1.0.0 | 1.1.0 (`63e48ad`) | 2026-10-11 | Início da governança formal; hierarquia de autoridade e metadados; delimitação entre a base v1.1.0 e o working tree posterior; classificação da lacuna de teste de arredondamento alinhada aos documentos normativos. |
+| 1.0.1 | Base 1.1.0 (`63e48ad`); RC local não publicado | 2026-10-12 | Adendo separado para a revisão local da v1.2: quatro opções, financiamento unitário, títulos compactos, primeira prestação e menu de conta sem autenticação. |
+| 1.0.2 | Base 1.1.0 (`63e48ad`); RC local não publicado | 2026-10-12 | Consolidação de interface: Lucide, tema na sidebar, seletores estáveis, componentes de formulário e métricas do Ciladômetro agrupadas sem duplicação dos destaques. |
+| 1.0.3 | Base 1.1.0 (`63e48ad`); RC local não publicado | 2026-10-12 | Refino visual da v1.2: seletor sem contador, card único fluido, estratégia compacta, tipografia de empates e espaço vertical ajustado. |
+| 1.0.4 | Base 1.1.0 (`63e48ad`); RC local não publicado | 2026-10-12 | Seletor com três veículos e “+N” no quarto cartão quando há mais de quatro cadastrados; radio quadrado, ícones dos campos menores e remoção do fechamento duplicado da Comparação. |
+| 1.0.5 | 1.2.0 (`v1.2.0`) | 2026-10-12 | Promoção do adendo as-built à release oficial, mantendo a auditoria histórica da base v1.1.0 separada. |

@@ -7,9 +7,12 @@ import { useAppState } from '../application/AppStateProvider'
 import {
   calculateOptionComparisons,
   initializeOptionSelection,
+  MAX_DASHBOARD_OPTIONS,
   reconcileOptionSelection,
 } from '../application/multiVehicleSelection'
 import type { TcoResult } from '../domain/tco'
+import type { Vehicle } from '../domain/vehicle'
+import { findUniqueLowestMetricId } from '../application/resultHighlights'
 import {
   formatCostPerKm,
   formatCurrency,
@@ -18,68 +21,75 @@ import {
 } from './format'
 import { OptionMultiSelect } from './OptionMultiSelect'
 import { TcoBreakdownTable } from './TcoBreakdownTable'
+import { OutcomeBadge } from './OutcomeBadge'
+import { ArrowDownRight, ArrowUpRight, Calendar, CalendarDays, Receipt, Route } from 'lucide-react'
+import { AppIcon } from './AppIcon'
+import { PowertrainBadge } from './PowertrainBadge'
 
-interface TcoPanelProps {
+function ComparisonVehicleCard({
+  label,
+  vehicle,
+  tco,
+  monthlyDifference,
+  reference = false,
+  winner = false,
+}: {
   readonly label: string
-  readonly name: string
+  readonly vehicle: Vehicle
   readonly tco: TcoResult
-  readonly emphasized: boolean
-}
-
-function TcoPanel({ label, name, tco, emphasized }: TcoPanelProps) {
+  readonly monthlyDifference?: number
+  readonly reference?: boolean
+  readonly winner?: boolean
+}) {
+  const saving = monthlyDifference !== undefined && monthlyDifference >= 0
   return (
-    <article className={`comparison-card ${emphasized ? 'comparison-card-best' : ''}`}>
-      <span className="eyebrow">{label}</span>
-      <h2>{name}</h2>
-      <div className="metric-group">
-        <h3>TCO de caixa</h3>
-        <dl className="metric-list">
-          <div><dt>Anual</dt><dd>{formatCurrency(tco.cashTco.annual)}</dd></div>
-          <div><dt>Mensal</dt><dd>{formatCurrency(tco.cashTco.monthly)}</dd></div>
-          <div><dt>Por km</dt><dd>{formatCostPerKm(tco.cashTco.perKm)}</dd></div>
-        </dl>
+    <article className={`comparison-vehicle-card ${reference ? 'comparison-vehicle-reference' : ''} ${winner ? 'outcome-card-winner' : ''}`}>
+      {reference && <OutcomeBadge tone="reference">Referência</OutcomeBadge>}
+      {winner && <OutcomeBadge>Menor TCO de caixa</OutcomeBadge>}
+      <div className="comparison-vehicle-heading">
+        <div>
+          <span className="eyebrow">{label}</span>
+          <h2>{vehicle.name}</h2>
+        </div>
+        <PowertrainBadge powertrain={vehicle.powertrain} reference={reference} />
       </div>
-      <div className="metric-group">
-        <h3>TCO econômico</h3>
-        <dl className="metric-list">
-          <div><dt>Anual</dt><dd>{formatCurrency(tco.economicTco.annual)}</dd></div>
-          <div><dt>Mensal</dt><dd>{formatCurrency(tco.economicTco.monthly)}</dd></div>
-          <div><dt>Por km</dt><dd>{formatCostPerKm(tco.economicTco.perKm)}</dd></div>
-        </dl>
+      <div className="comparison-primary-cost">
+        <span><AppIcon icon={CalendarDays} size={20} />TCO de caixa mensal</span>
+        <strong>{formatCurrency(tco.cashTco.monthly)}</strong>
+        {monthlyDifference !== undefined && (
+        <small className={`vehicle-cost-difference ${monthlyDifference === 0 ? 'vehicle-cost-neutral' : saving ? 'vehicle-cost-saving' : 'vehicle-cost-extra'}`}>
+          {monthlyDifference === 0 ? 'Mesmo custo operacional' : <>
+            <AppIcon icon={saving ? ArrowUpRight : ArrowDownRight} size={16} />{saving ? 'Economia' : 'Custo adicional'} de {formatCurrency(Math.abs(monthlyDifference))}/mês
+          </>}
+          </small>
+        )}
       </div>
+      <dl className="comparison-cost-strip">
+        <div><dt><AppIcon icon={Calendar} size={20} />Anual</dt><dd>{formatCurrency(tco.cashTco.annual)}</dd></div>
+        <div><dt><AppIcon icon={Route} size={20} />Por km</dt><dd>{formatCostPerKm(tco.cashTco.perKm)}</dd></div>
+        <div><dt><AppIcon icon={Receipt} size={20} />TCO econômico</dt><dd>{formatCurrency(tco.economicTco.monthly)}/mês</dd></div>
+      </dl>
     </article>
   )
 }
-
-function ComparisonSummary({ result }: { readonly result: IntegratedVehicleComparison }) {
+function OperationalInsight({ result, winner }: {
+  readonly result: IntegratedVehicleComparison
+  readonly winner: boolean
+}) {
   const monthly = result.operationalSavings.monthly
   const optionIsCheaper = monthly >= 0
   return (
-    <section className={`insight-card ${optionIsCheaper ? 'insight-positive' : 'insight-negative'}`}>
-      <span className="eyebrow">Resultado operacional</span>
-      <h2>{formatOperationalHeadline(result.candidate.vehicle.name, monthly)}</h2>
-      <div className="insight-metrics">
-        <div><span>{optionIsCheaper ? 'Economia anual' : 'Custo adicional anual'}</span><strong>{formatCurrency(Math.abs(result.operationalSavings.annual))}</strong></div>
-        <div><span>{optionIsCheaper ? 'Economia mensal' : 'Custo adicional mensal'}</span><strong>{formatCurrency(Math.abs(monthly))}</strong></div>
-        <div><span>Diferença por km</span><strong>{formatCostPerKm(Math.abs(result.operationalSavings.perKm))}</strong></div>
-        <div><span>Diferença percentual de caixa</span><strong>{formatPercentageValue(result.cashDifference.percentage.annual)}</strong></div>
+    <article className={`comparison-insight ${optionIsCheaper ? 'comparison-insight-saving' : 'comparison-insight-cost'} ${winner ? 'outcome-card-winner' : ''}`}>
+      {winner && <OutcomeBadge>Maior economia operacional</OutcomeBadge>}
+      <div>
+        <h3>{formatOperationalHeadline(result.candidate.vehicle.name, monthly)}</h3>
       </div>
-    </section>
-  )
-}
-
-function ConsolidatedDifferences({ result }: {
-  readonly result: IntegratedVehicleComparison
-}) {
-  return (
-    <article className="data-card">
-      <h3>{result.candidate.vehicle.name}</h3>
-      <div className="insight-metrics">
-        <div><span>Diferença absoluta de caixa</span><strong>{formatCurrency(result.cashDifference.absolute.annual)}/ano</strong></div>
-        <div><span>Diferença percentual de caixa</span><strong>{formatPercentageValue(result.cashDifference.percentage.annual)}</strong></div>
-        <div><span>Diferença econômica absoluta</span><strong>{formatCurrency(result.economicDifference.absolute.annual)}/ano</strong></div>
-        <div><span>Diferença econômica percentual</span><strong>{formatPercentageValue(result.economicDifference.percentage.annual)}</strong></div>
-      </div>
+      <dl className="comparison-insight-metrics">
+        <div><dt>{optionIsCheaper ? 'Economia anual' : 'Custo anual adicional'}</dt><dd>{formatCurrency(Math.abs(result.operationalSavings.annual))}</dd></div>
+        <div><dt>Diferença por km</dt><dd>{formatCostPerKm(Math.abs(result.operationalSavings.perKm))}</dd></div>
+        <div><dt>Diferença de caixa</dt><dd>{formatPercentageValue(result.cashDifference.percentage.annual)}</dd></div>
+        <div><dt>Diferença econômica</dt><dd>{formatPercentageValue(result.economicDifference.percentage.annual)}</dd></div>
+      </dl>
     </article>
   )
 }
@@ -100,6 +110,7 @@ export function ComparisonScreen() {
       current,
       availableIds,
       state.selectedComparisonCandidateId,
+      MAX_DASHBOARD_OPTIONS,
     ))
   }, [availableIds, state.selectedComparisonCandidateId])
 
@@ -120,17 +131,21 @@ export function ComparisonScreen() {
       : 'Não foi possível comparar os veículos'
   }
   const currentResult = results[0]
+  const lowestCostId = currentResult ? findUniqueLowestMetricId([
+    { id: currentResult.current.id, value: currentResult.currentTco.cashTco.monthly },
+    ...results.map((result) => ({ id: result.candidate.id, value: result.candidateTco.cashTco.monthly })),
+  ]) : null
 
   return (
-    <div className="screen-stack">
-      <header className="page-header">
+    <div className="screen-stack comparison-screen comparison-dashboard">
+      <header className="page-header comparison-dashboard-header">
         <div>
-          <span className="eyebrow">Decisão orientada por custos</span>
+          <span className="eyebrow">Qual custa menos?</span>
           <h1>Comparação</h1>
-          <p>Compare uma ou duas opções com o TCO anual normalizado do veículo atual.</p>
+          <p>Compare os custos das opções com os do seu veículo atual.</p>
         </div>
         <OptionMultiSelect
-          label="Veículos comparados"
+          label="Opções para comparar"
           candidates={state.candidates}
           selectedIds={selectedIds}
           error={selectionError}
@@ -147,46 +162,49 @@ export function ComparisonScreen() {
       </header>
 
       {calculationError && <div className="alert alert-error">{calculationError}</div>}
-      {results.length > 0 && (
+      {currentResult && (
         <>
-          <div className={`multi-result-grid ${results.length === 1 ? 'multi-result-grid-single' : ''}`}>
-            {results.map((result) => (
-              <ComparisonSummary key={result.candidate.id} result={result} />
-            ))}
-          </div>
-          {currentResult && (
-            <div className={`comparison-grid ${results.length === 2 ? 'comparison-grid-three' : ''}`}>
-              <TcoPanel
-                label="Veículo atual"
-                name={currentResult.current.vehicle.name}
+          <section className="comparison-hero-board">
+            <div className="dashboard-section-heading">
+              <div><span className="eyebrow">Visão lado a lado</span><h2>Custos de uso</h2></div>
+              <span className="comparison-reference-context">Referência: <strong>{currentResult.current.vehicle.name}</strong></span>
+            </div>
+            <div className={`comparison-vehicle-grid comparison-vehicle-grid-${results.length + 1}`}>
+              <ComparisonVehicleCard
+                label="Veículo atual · referência"
+                vehicle={currentResult.current.vehicle}
                 tco={currentResult.currentTco}
-                emphasized={results.every((result) => (
-                  currentResult.currentTco.cashTco.monthly <= result.candidateTco.cashTco.monthly
-                ))}
+                reference
               />
               {results.map((result) => (
-                <TcoPanel
+                <ComparisonVehicleCard
                   key={result.candidate.id}
                   label="Opção de troca"
-                  name={result.candidate.vehicle.name}
+                  vehicle={result.candidate.vehicle}
                   tco={result.candidateTco}
-                  emphasized={result.candidateTco.cashTco.monthly < result.currentTco.cashTco.monthly}
+                  monthlyDifference={result.operationalSavings.monthly}
+                  winner={lowestCostId === result.candidate.id}
                 />
               ))}
             </div>
-          )}
+          </section>
+
+          <section className="comparison-insights-board">
+            <div className="dashboard-section-heading">
+              <div><span className="eyebrow">Leitura rápida</span><h2>Resultado operacional</h2></div>
+            </div>
+            <div className={`comparison-insights-grid comparison-insights-grid-${results.length}`}>
+              {results.map((result) => (
+                <OperationalInsight key={result.candidate.id} result={result} winner={lowestCostId === result.candidate.id} />
+              ))}
+            </div>
+          </section>
+
           <TcoBreakdownTable
             current={state.currentVehicle.vehicle}
             options={results.map((result) => result.candidate.vehicle)}
           />
-          <section>
-            <div className="section-heading"><div><span className="eyebrow">Visão consolidada</span><h2>Diferenças</h2></div></div>
-            <div className={`multi-result-grid ${results.length === 1 ? 'multi-result-grid-single' : ''}`}>
-              {results.map((result) => (
-                <ConsolidatedDifferences key={result.candidate.id} result={result} />
-              ))}
-            </div>
-          </section>
+
         </>
       )}
     </div>

@@ -54,6 +54,22 @@ describe('seleção de opções para comparação', () => {
     expect(toggleOptionSelection(['a', 'b'], 'a').selectedIds).toEqual(['b'])
   })
 
+  it('permite três e quatro opções no RC sem modificar o limite legado', () => {
+    expect(toggleOptionSelection(['a', 'b'], 'c', 4).selectedIds).toEqual(['a', 'b', 'c'])
+    expect(toggleOptionSelection(['a', 'b', 'c'], 'd', 4).selectedIds).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('rejeita a quinta opção sem perder as quatro selecionadas', () => {
+    expect(toggleOptionSelection(['a', 'b', 'c', 'd'], 'e', 4)).toEqual({
+      selectedIds: ['a', 'b', 'c', 'd'], limitReached: true,
+    })
+  })
+
+  it('reconcilia quatro opções preservando ordem e removendo duplicatas', () => {
+    expect(reconcileOptionSelection(['a', 'a', 'b', 'c', 'd', 'e'], ['a', 'b', 'c', 'd', 'e'], 'a', 4))
+      .toEqual(['a', 'b', 'c', 'd'])
+  })
+
   it('remove seleção excluída e mantém ao menos uma disponível', () => {
     expect(reconcileOptionSelection(['a', 'b'], ['b', 'c'], 'b')).toEqual(['b'])
     expect(reconcileOptionSelection(['a'], ['b', 'c'], 'b')).toEqual(['b'])
@@ -69,5 +85,16 @@ describe('seleção de opções para comparação', () => {
     expect(results.map((result) => result.candidate.vehicle.name)).toEqual(['Opção A', 'Opção B'])
     expect(results[0].operationalSavings.annual).toBe(1_000)
     expect(results[1].operationalSavings.annual).toBe(-1_000)
+  })
+
+  it('compara quatro opções contra a mesma referência sem mudar os cálculos', () => {
+    let state = setCurrentVehicle(createInitialAppState(), vehicle('Atual', 2_000), 'current')
+    for (const [index, maintenance] of [1_000, 2_000, 3_000, 4_000].entries()) {
+      state = addCandidate(state, vehicle(`Opção ${index}`, maintenance), `option-${index}`)
+    }
+    const results = calculateOptionComparisons(state, state.candidates.map((candidate) => candidate.id))
+    expect(results).toHaveLength(4)
+    expect(results.map((result) => result.current.id)).toEqual(['current', 'current', 'current', 'current'])
+    expect(results.map((result) => result.operationalSavings.annual)).toEqual([1_000, 0, -1_000, -2_000])
   })
 })
