@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { AppStateProvider } from './application/AppStateProvider.tsx'
+import { AuthProvider } from './application/AuthProvider.tsx'
 import { loadThemePreference } from './application/themePreference.ts'
 
 const initialTheme = loadThemePreference(
@@ -14,8 +15,10 @@ document.documentElement.style.colorScheme = initialTheme
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppStateProvider>
-      <App />
-    </AppStateProvider>
+    <AuthProvider>
+      <AppStateProvider>
+        <App />
+      </AppStateProvider>
+    </AuthProvider>
   </StrictMode>,
 )

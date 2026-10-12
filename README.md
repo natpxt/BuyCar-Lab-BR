@@ -1,154 +1,65 @@
 # BuyCar Lab - BR
 
-**Versão oficial: v1.2.0.** [Abrir o aplicativo](https://buy-car-lab-br.vercel.app/).
+**Versão oficial: v1.3.0.** [Abrir o aplicativo](https://buy-car-lab-br.vercel.app/).
 
-Aplicativo para comparar o custo total de propriedade de veículos e analisar contratos de financiamento PRICE. Ele funciona no navegador, mantém os dados no armazenamento local desse navegador e não exige conta. Pode ser usado pelo site publicado ou executado localmente.
+Aplicativo para comparar o custo total de propriedade de veículos e analisar financiamentos PRICE. O uso principal é pelo site, sem instalação. Você pode criar uma conta para guardar e sincronizar sua garagem ou continuar sem conta, com dados apenas neste navegador.
+
+**Cadastro em fase inicial:** o envio padrão do Supabase confirma emails de endereços autorizados na equipe do projeto. Enquanto não houver SMTP próprio, outras pessoas podem usar o aplicativo sem login, mas podem não conseguir confirmar uma conta. [Entenda a limitação](https://supabase.com/docs/guides/auth/auth-smtp).
 
 ## O que o aplicativo oferece
 
-- Cadastro de veículo atual e opções de troca ICE, HEV, PHEV e BEV.
-- Comparação simultânea de até quatro opções pelo TCO de caixa e pelo TCO econômico.
-- Laboratório de financiamento PRICE com três estratégias de amortização.
-- Aportes únicos, plano recorrente, exceções e cobranças periódicas.
-- Gráficos, tabela de amortização mensal ou anual, filtros e exportação CSV.
-- Ciladômetro para comparar o impacto financeiro real de até quatro opções de troca.
-- Modos claro e escuro.
-- Interface responsiva com identidade visual própria, ícones Lucide e logo Estrada B.
-- Persistência automática no `localStorage` do navegador.
-
-## Site publicado e dados
-
-O [site oficial](https://buy-car-lab-br.vercel.app/) está hospedado no Vercel. O Vercel entrega os arquivos da aplicação; veículos, financiamentos e preferência de tema são salvos pelo próprio navegador. Eles não são enviados a uma conta nem sincronizados com outros dispositivos.
-
-O endereço `localhost:5173` e o domínio `buy-car-lab-br.vercel.app` têm armazenamentos locais separados. Por isso, os veículos cadastrados no desenvolvimento local não aparecem automaticamente no site publicado. No mesmo navegador e no mesmo domínio publicado, uma atualização da aplicação normalmente preserva os dados locais; usar outro navegador, perfil, dispositivo ou domínio de deployment abre um armazenamento diferente. Limpar os dados do site no navegador também remove os registros locais.
-
-O repositório está conectado ao Vercel com `main` como branch de produção. Um **push de novo commit para `main`** inicia um novo build e, se ele for bem-sucedido, atualiza o domínio de produção automaticamente. Um commit que permaneça apenas no computador não atualiza o site. Criar uma tag ou uma GitHub Release, por si só, também não muda o deployment de produção.
-
-## Como instalar
-
-### Requisitos
-
-Instale o [Node.js](https://nodejs.org/) em uma versão compatível com o projeto: `20.19` ou superior, ou `22.12` ou superior. O `npm` é instalado junto com o Node.js.
-
-### 1. Baixe o projeto
-
-Na página do repositório, clique em **Code** e depois em **Download ZIP**. Extraia o arquivo em uma pasta de sua preferência.
-
-Também é possível usar Git:
-
-```sh
-git clone https://github.com/natpxt/BuyCar-Lab-BR.git
-cd BuyCar-Lab-BR
-```
-
-### 2. Abra o terminal na pasta do projeto
-
-No Windows, abra a pasta extraída, clique com o botão direito em uma área vazia e escolha **Abrir no Terminal**.
-
-Entre na pasta da aplicação:
-
-```sh
-cd app
-```
-
-### 3. Instale as dependências
-
-```sh
-npm install
-```
-
-Esse comando precisa ser executado apenas na primeira instalação ou quando as dependências forem atualizadas.
-
-### 4. Inicie o aplicativo
-
-```sh
-npm run dev
-```
-
-O terminal mostrará um endereço local, normalmente:
-
-```text
-http://localhost:5173/
-```
-
-Abra esse endereço no navegador. Mantenha o terminal aberto enquanto estiver usando o aplicativo. Para encerrar, volte ao terminal e pressione `Ctrl + C`.
+- Garagem com veículo atual e opções de troca a combustão (ICE), híbridas (HEV e PHEV) e elétricas (BEV).
+- Comparação de até quatro opções por TCO de caixa, TCO econômico e custo por quilômetro.
+- Laboratório de financiamento PRICE, aportes, cobranças e três estratégias de amortização.
+- Ciladômetro para comparar o impacto financeiro da troca.
+- Gráficos, tabela de amortização, filtros e exportação CSV.
+- Modos claro e escuro, cadastro de conta e uso sem login.
 
 ## Como usar
 
-O fluxo recomendado é seguir as quatro áreas do menu lateral.
+### Acesse o site e escolha como guardar os dados
 
-### 01 — Veículos
+Abra [buy-car-lab-br.vercel.app](https://buy-car-lab-br.vercel.app/). No menu **Entrar**, você pode criar uma conta com nome, email e senha, confirmar o email recebido e fazer login. A garagem da conta é salva no Supabase e pode ser carregada em outros dispositivos ao entrar com a mesma conta.
 
-1. Na **Garagem**, clique em **Cadastrar veículo atual** e informe os dados do carro que você possui hoje.
-2. Use **Adicionar opção** para cadastrar os veículos que considera comprar.
-3. Escolha a motorização correta: combustão, híbrido, híbrido plug-in ou elétrico.
-4. Preencha quilometragem, valor, depreciação, seguro, manutenção e os custos de combustível ou energia aplicáveis.
-5. Revise o IPVA estimado automaticamente em 4% do valor do veículo para São Paulo e o licenciamento padrão de São Paulo de 2026. Ambos podem ser editados manualmente.
+Nesta etapa, a confirmação por email está limitada aos endereços autorizados no projeto Supabase. O cadastro público será liberado após configurar um serviço SMTP próprio.
 
-Os cards permitem editar, duplicar e excluir opções. O custo mensal exibido usa o TCO de caixa calculado com os dados informados.
+Você também pode usar todas as áreas sem fazer login. Nesse caso, veículos e financiamentos ficam no armazenamento local do navegador e podem desaparecer se os dados do site forem apagados. Eles não aparecem automaticamente em outro navegador ou dispositivo.
+
+Se você já usava o aplicativo sem conta **nesse mesmo navegador e endereço**, o primeiro login oferece importar a garagem local. A importação é opcional; a cópia local é preservada. Se a conta já tiver uma garagem, o aplicativo pede confirmação antes de substituí-la. A opção de importar também fica no menu da conta.
+
+### 01 — Garagem
+
+Cadastre o veículo atual e as opções de troca. Escolha a motorização e preencha valor, quilometragem, depreciação, custos anuais e consumo de combustível ou energia. Revise o IPVA e o licenciamento estimados para São Paulo. Os cards permitem editar, duplicar e excluir opções.
 
 ### 02 — Comparação
 
-1. Selecione de uma a quatro opções de troca.
-2. Leia o resultado operacional de cada veículo em relação ao veículo atual.
-3. Compare TCO de caixa, TCO econômico e custo por quilômetro.
-4. Use **Mensal** ou **Anual** na comparação detalhada para analisar combustível, energia elétrica, manutenção, seguro, IPVA, licenciamento e depreciação.
-
-Na coluna **Diferença**, um valor positivo representa economia com a opção de troca. Um valor negativo representa custo adicional.
+Selecione até quatro opções. Compare os custos operacionais contra o veículo atual, incluindo TCO de caixa, TCO econômico e componentes mensais ou anuais. Na coluna **Diferença**, valor positivo indica economia operacional.
 
 ### 03 — Financiamento
 
-1. Escolha o **Veículo a financiar**.
-2. Informe preço, valor de troca, entrada adicional e custos financiados. Se necessário, utilize o valor financiado manual.
-3. Configure taxa efetiva, periodicidade e prazo do contrato PRICE.
-4. Escolha a estratégia que será salva para o veículo:
-   - **Sem amortização extraordinária**;
-   - **Reduzir parcela**;
-   - **Reduzir prazo**.
-5. Em **Planos de amortização**, adicione aportes únicos ou um plano recorrente. As exceções permitem substituir o valor de ocorrências específicas do plano recorrente.
-6. Em **Cobranças periódicas**, registre seguros, tarifas ou outras cobranças que saem do caixa sem reduzir a dívida.
-7. Clique em **Salvar e calcular financiamento**.
-
-O laboratório apresenta as três estratégias lado a lado, com prestação inicial, juros, economia, total desembolsado, aportes e prazo efetivo. Os gráficos reutilizam os cronogramas calculados para mostrar saldo devedor, composição dos pagamentos e evolução da prestação.
-
-Na **Tabela de amortização**, escolha a estratégia, alterne entre visão mensal e anual, filtre os períodos e use **Baixar CSV** para exportar exatamente os dados exibidos.
+Escolha uma opção, informe preço, entrada, taxa e prazo do contrato PRICE. Configure aportes ou cobranças periódicas, escolha a estratégia salva e clique em **Salvar e calcular financiamento**. Compare as três estratégias, examine os gráficos e a tabela mensal ou anual e exporte CSV.
 
 ### 04 — Ciladômetro
 
-1. Selecione de uma a quatro opções de troca.
-2. O aplicativo compara cada opção com o veículo atual e calcula as três estratégias financeiras internamente.
-3. Para cada veículo, o Ciladômetro recomenda a estratégia com menor impacto total no bolso durante o horizonte do contrato, preservando empates.
-4. Compare impacto no primeiro mês, impacto médio, impacto total, economia operacional, custo após a quitação e fluxo real do financiamento.
+Selecione até quatro opções para comparar economia operacional e desembolso financeiro no horizonte do contrato. O aplicativo mostra a estratégia de menor impacto no caixa e preserva empates. A análise financeira não substitui critérios pessoais de escolha.
 
-A métrica de impacto usa os pagamentos efetivamente aplicados no cronograma, incluindo aportes e cobranças nos períodos corretos. O Ciladômetro não produz uma nota arbitrária e não substitui critérios pessoais ou não financeiros.
+## Preferências e dados
 
-Se uma opção ainda não tiver financiamento configurado, seus dados de TCO continuam disponíveis e a tela orienta a concluir a configuração na área **Financiamento**.
-
-## Preferências e dados locais
-
-- Use o controle no rodapé da navegação para alternar entre os modos claro e escuro.
-- Veículos e financiamentos são salvos automaticamente no navegador.
-- Os dados não são sincronizados entre navegadores, domínios ou computadores.
-- O tema visual é salvo separadamente dos dados financeiros.
-- O botão **Limpar todos os dados** remove os veículos e as simulações armazenados no navegador.
-
-## Atualizar uma instalação existente
-
-Abra o terminal na pasta do projeto e execute:
-
-```sh
-git pull
-cd app
-npm install
-npm run dev
-```
-
-Se você baixou um arquivo ZIP, baixe a versão mais recente e extraia-a em uma nova pasta. Os dados existentes permanecem no navegador quando a aplicação continua sendo acessada pela mesma origem local.
+- O tema claro ou escuro fica salvo neste navegador, inclusive quando você usa uma conta.
+- Na conta, entradas dos veículos, configurações financeiras e seleções principais são sincronizadas; TCO e cronogramas são recalculados no navegador.
+- Ao sair da conta, a garagem da conta deixa de aparecer. A garagem local do visitante, se houver, continua separada.
+- Alterações pendentes exibem o estado de sincronização. Evite fechar a página antes de concluir a gravação.
+- Se outra sessão tiver mudado a garagem, a gravação é interrompida e o aplicativo pede uma decisão antes de substituir os dados remotos. Edições iniciadas exatamente ao mesmo tempo ainda podem disputar a gravação.
+- **Limpar todos os dados** remove a garagem do modo em uso: da conta quando você está conectado, ou deste navegador no modo visitante.
 
 ## Premissas e limitações
 
-O aplicativo não possui backend, conta, sincronização entre dispositivos ou consulta a APIs externas. Os resultados dependem das entradas fornecidas e não constituem recomendação financeira.
+Os resultados dependem das entradas fornecidas e não constituem recomendação financeira. TCO de caixa, TCO econômico e fluxo de caixa do financiamento são conceitos separados. O principal amortizado reduz a dívida, mas não é custo econômico isolado.
 
-TCO de caixa, TCO econômico e fluxo do financiamento são conceitos separados. O principal amortizado reduz a dívida e não é tratado como custo econômico.
+Dados salvos em `localhost` pertencem a outra origem e não aparecem automaticamente no site publicado. A entrega de emails de confirmação e recuperação depende da configuração de envio do projeto Supabase. Consulte [a especificação do produto](docs/PRODUCT_SPEC.md), [o modelo financeiro](docs/FINANCIAL_MODEL.md), [o guia funcional](docs/APPLICATION_GUIDE.md) e [a configuração do Supabase](docs/SUPABASE_SETUP.md).
 
-Consulte [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md) e [docs/FINANCIAL_MODEL.md](docs/FINANCIAL_MODEL.md) para as regras e premissas detalhadas.
+O GitHub está ligado à Vercel: um push para `main` inicia o build e, se ele passar, atualiza o site. Um commit apenas no computador não altera a produção.
+
+## Instalação local (opcional)
+
+Para executar o projeto no seu computador, siga [Instalar local: como instalar localmente](docs/INSTALL_LOCAL.md).

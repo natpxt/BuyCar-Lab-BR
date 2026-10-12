@@ -30,7 +30,7 @@ function prefersDarkTheme(): boolean {
 }
 
 export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
-  const { persistenceError, clearAllData } = useAppState()
+  const { persistenceError, clearAllData, storageMode, retrySave } = useAppState()
   const [theme, setTheme] = useState<ThemeMode>(() => (
     loadThemePreference(window.localStorage, prefersDarkTheme())
   ))
@@ -74,7 +74,8 @@ export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
           <button
             className="clear-data"
             onClick={() => {
-              if (window.confirm('Apagar todos os veículos e simulações salvos neste navegador? Esta ação não pode ser desfeita.')) {
+              const target = storageMode === 'cloud' ? 'na sua conta' : 'neste navegador'
+              if (window.confirm(`Apagar todos os veículos e simulações salvos ${target}? Esta ação não pode ser desfeita.`)) {
                 clearAllData()
               }
             }}
@@ -95,6 +96,7 @@ export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
           {persistenceError && (
             <div className="alert alert-error persistence-alert">
               <strong>Erro de persistência.</strong> {persistenceError.message}. Os dados desta sessão foram preservados em memória.
+              {storageMode === 'cloud' && <button type="button" onClick={retrySave}>Revisar e sincronizar</button>}
             </div>
           )}
           {children}

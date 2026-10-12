@@ -1,12 +1,12 @@
 # BuyCar Lab - BR — Guia Funcional da Aplicação
 
-> Base auditada v1.1.0 com adendo as-built da v1.2.0
+> Base auditada v1.1.0 com adendos as-built da v1.2.0 e v1.3.0
 
 > Documento: APPLICATION_GUIDE
 >
-> Revisão do documento: 1.0.5
+> Revisão do documento: 1.0.7
 >
-> Aplicação descrita: 1.2.0 (base auditada 1.1.0 + adendo)
+> Aplicação descrita: 1.3.0 (base auditada 1.1.0 + adendos)
 >
 > Commit base auditado: 63e48ad
 >
@@ -41,6 +41,21 @@ Validado em 2026-10-12 e publicado na branch `main` como v1.2.0. As seções num
 - `ui/SectionHeader.tsx` padroniza os quatro cabeçalhos do cadastro e os grupos financeiros; `ui/CheckboxOption.tsx` compartilha apresentação entre cópia de km, IPVA automático e licenciamento padrão. As funções de formulário, valores herdados, inferência, overrides e validações permanecem intactos. O resumo financeiro informa que corresponde ao último cálculo e exige salvar para atualização.
 
 Os detalhes visuais e a validação da v1.2.0 estão em [UX_REDESIGN_V1_2.md](UX_REDESIGN_V1_2.md). A identidade visual e o logo aprovado estão em [VISUAL_IDENTITY.md](VISUAL_IDENTITY.md).
+
+## Adendo as-built — contas e garagem remota da v1.3.0
+
+A v1.3.0 integra Supabase Auth e as quatro tabelas descritas em [SUPABASE_SETUP.md](SUPABASE_SETUP.md). O modo visitante mantém o comportamento local anterior.
+
+- Sem `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`, a aplicação permanece em modo visitante local. Com as variáveis públicas configuradas, o menu oferece cadastro com nome, email, senha e confirmação da senha, login, recuperação de senha e saída. Supabase Auth exige a confirmação por email configurada no projeto.
+- A conta recebe um perfil com nome. Após autenticação, o provider carrega os veículos, configurações financeiras e seleções daquela conta. O modo visitante continua com a chave local `mycar:app-state:v1`. A cópia local não é apagada ao entrar ou sair.
+- No primeiro login com garagem local, uma confirmação oferece importá-la; se também houver garagem remota, a mensagem informa que a importação a substituirá. A escolha fica registrada localmente por conta para não reaparecer a cada login. O menu da conta mantém uma ação para importar posteriormente.
+- Alterações na conta são enviadas em sequência ao Supabase; o menu sinaliza sincronização pendente e o navegador alerta ao tentar fechar a página com gravação em andamento. Falhas mantêm o estado em memória, exibem erro e oferecem nova tentativa. Sair da conta espera a fila de gravação terminar.
+- A persistência remota guarda os objetos `Vehicle` e `CandidateFinancingInput` completos em JSONB, sem resultados derivados. O carregamento executa `assertValidAppState`. Exclusão de opção remove o contrato associado. O banco aplica RLS por `user_id` e não concede leitura anônima.
+- Antes de cada gravação, o cliente relê a garagem remota e a compara com a versão carregada. Se outra sessão a alterou, interrompe a fila de gravação, mantém a edição atual em memória e mostra um aviso. **Revisar e sincronizar** pede confirmação antes de substituir a versão da conta. O fechamento da página com alterações pendentes gera alerta.
+- **Limite de concorrência:** a comparação e a gravação não ocorrem em uma transação única. Duas sessões que iniciarem a escrita no mesmo instante ainda podem sobrescrever uma à outra. Controle transacional permanece no roadmap; não há garantia de colaboração simultânea.
+- **Validação:** o usuário confirmou localmente cadastro, recebimento de email no Gmail, confirmação, login, saída, novo login e linhas gravadas nas tabelas. Por decisão do usuário, a v1.3.0 mantém o SMTP padrão temporariamente; emails de endereços externos à equipe podem ser recusados. O cadastro público permanece pendente de SMTP próprio e teste externo. As variáveis públicas foram cadastradas na Vercel pelo usuário; o valor de produção não foi inspecionado por este guia.
+
+O `FINANCIAL_MODEL.md` não mudou: TCO, PRICE, cronogramas e Ciladômetro continuam calculados pelos mesmos módulos.
 
 ## 1. Visão geral
 
@@ -896,3 +911,5 @@ Futuras alterações não devem quebrar estas regras confirmadas:
 | 1.0.3 | Base 1.1.0 (`63e48ad`); RC local não publicado | 2026-10-12 | Refino visual da v1.2: seletor sem contador, card único fluido, estratégia compacta, tipografia de empates e espaço vertical ajustado. |
 | 1.0.4 | Base 1.1.0 (`63e48ad`); RC local não publicado | 2026-10-12 | Seletor com três veículos e “+N” no quarto cartão quando há mais de quatro cadastrados; radio quadrado, ícones dos campos menores e remoção do fechamento duplicado da Comparação. |
 | 1.0.5 | 1.2.0 (`v1.2.0`) | 2026-10-12 | Promoção do adendo as-built à release oficial, mantendo a auditoria histórica da base v1.1.0 separada. |
+| 1.0.6 | 1.2.0 publicada + working tree local de contas | 2026-10-12 | Registra Auth e garagem remota em desenvolvimento, modo visitante, importação e gaps de conflito, SMTP e teste autenticado; sem descrever o código local como release. |
+| 1.0.7 | 1.3.0 | 2026-10-12 | Promove Auth e garagem remota à release, incorpora teste autenticado relatado e verificação de alterações remotas antes da gravação; registra o limite de concorrência simultânea. |

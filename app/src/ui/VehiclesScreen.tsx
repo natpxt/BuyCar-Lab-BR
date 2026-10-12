@@ -8,6 +8,7 @@ import {
   type StoredVehicle,
 } from '../application/appState'
 import { useAppState } from '../application/AppStateProvider'
+import { useAuth } from '../application/AuthProvider'
 import {
   calculateVehicleCardSummary,
   findLowestMonthlyCashTcoVehicleIds,
@@ -64,6 +65,10 @@ function newId(): string {
 
 export function VehiclesScreen() {
   const { state, updateState } = useAppState()
+  const { user } = useAuth()
+  const accountName = typeof user?.user_metadata.display_name === 'string'
+    ? user.user_metadata.display_name.trim()
+    : ''
   const [editor, setEditor] = useState<EditorTarget | null>(null)
   const currentSummary = useMemo(
     () => state.currentVehicle
@@ -113,7 +118,7 @@ export function VehiclesScreen() {
       <header className="page-header">
         <div>
           <span className="eyebrow">Seus veículos</span>
-          <h1>Minha garagem</h1>
+          <h1>{accountName ? `Garagem de ${accountName}` : 'Minha garagem'}</h1>
           <p>Cadastre os dados usados nos cálculos de TCO e financiamento.</p>
         </div>
         <button className="button button-primary" onClick={() => setEditor({ kind: 'candidate' })}>

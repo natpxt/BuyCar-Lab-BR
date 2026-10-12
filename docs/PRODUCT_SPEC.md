@@ -2,9 +2,9 @@
 
 > Documento: PRODUCT_SPEC
 >
-> Revisão do documento: 1.0.6
+> Revisão do documento: 1.0.8
 >
-> Aplicação descrita: 1.2.0 (base auditada 1.1.0 + seção 14.1)
+> Aplicação descrita: 1.3.0 (base auditada 1.1.0 + adendos v1.2 e v1.3)
 >
 > Commit base auditado: 63e48ad
 >
@@ -395,10 +395,10 @@ impacto líquido do período = period.totalPayment - economia operacional mensal
 
 `period.totalPayment` já inclui a prestação, o aporte efetivamente aplicado e as cobranças daquele período. Após a quitação, o pagamento financeiro é zero e a diferença operacional continua no horizonte. Ao comparar duas opções, ambas usam o maior prazo contratual original como horizonte comum. A tela apresenta as métricas correspondentes lado a lado; uma opção sem financiamento continua exibindo seu TCO, não bloqueia a outra e não participa de uma classificação financeira incompleta.
 
-## 11. Persistência atual
+## 11. Persistência da base v1.1.0
 
 - Os dados são salvos automaticamente no `localStorage` do dispositivo e perfil de navegador atuais, sob schema versionado.
-- Conta, sincronização e backend não existem na v1.x; pertencem ao roadmap.
+- Na base v1.1.0, conta, sincronização e backend ainda não existiam. A seção 15.2.1 descreve a mudança da v1.3.0.
 - Persistem veículo atual, opções de troca, seleções unitárias compatíveis e entradas das simulações associadas.
 - A primeira seleção compatível é persistida; a segunda seleção de Comparação e Ciladômetro é local à tela.
 - Cronogramas, TCOs e métricas do Ciladômetro são recalculados e não são persistidos como autoridade.
@@ -406,7 +406,7 @@ impacto líquido do período = period.totalPayment - economia operacional mensal
 - O usuário possui ação explícita para apagar os dados financeiros locais, com confirmação.
 - Falhas de leitura ou gravação local devem gerar mensagem compreensível sem apagar silenciosamente os dados em memória.
 
-O Laboratório exporta sua tabela ativa em CSV no navegador. Importação e sincronização pertencem ao roadmap.
+O Laboratório exporta sua tabela ativa em CSV no navegador. A importação local e a sincronização são acrescentadas na v1.3.0; importação de arquivos externos permanece no roadmap.
 
 ## 12. Validações, erros e estados vazios
 
@@ -454,7 +454,7 @@ Esta especificação não fixa CSS, posição exata ou dimensão de componentes.
 
 ### 14.1 Release visual da v1.2.0
 
-As decisões implementadas na v1.2.0 estão em [UX_REDESIGN_V1_2.md](UX_REDESIGN_V1_2.md): referência violeta, seleção compacta de até quatro opções nas telas comparativas, métricas proporcionais, destaques objetivos com preservação de empates e apresentação do Ciladômetro. As seções anteriores que mencionam o limite de duas opções descrevem a base v1.1.0; esta seção prevalece para a v1.2.0. O `APPLICATION_GUIDE.md` registra as diferenças implementadas em adendo próprio. Autenticação, garagens por usuário e persistência remota continuam no roadmap.
+As decisões implementadas na v1.2.0 estão em [UX_REDESIGN_V1_2.md](UX_REDESIGN_V1_2.md): referência violeta, seleção compacta de até quatro opções nas telas comparativas, métricas proporcionais, destaques objetivos com preservação de empates e apresentação do Ciladômetro. As seções anteriores que mencionam o limite de duas opções descrevem a base v1.1.0; esta seção prevalece para a v1.2.0. O `APPLICATION_GUIDE.md` registra as diferenças implementadas em adendo próprio. Contas e garagem remota são acrescentadas na v1.3.0, conforme a seção 15.2.1.
 
 Diretrizes aprovadas para a v1.2.0 em 2026-10-12: cabeçalhos compactos alinhados; “Minha garagem” enquanto não houver usuário autenticado; “Simular financiamento”; faixa com até quatro veículos visíveis. Com cinco ou mais cadastrados, o quarto cartão vira “+N” e abre os demais, mantendo o painel ao lado do título no desktop. Comparação e Ciladômetro aceitam até quatro opções, enquanto Financiamento permanece unitário. A primeira seleção continua persistida; as demais são locais. A ordem dos veículos permanece estável ao selecionar; os controles usam coluna reservada para checkbox/radio e título legível. O limite máximo é indicado sem contador visual de selecionados; a escolha única do financiamento conserva semântica radio, indicador quadrado e altura estável ao alternar veículos. Os ícones dos parâmetros financeiros são menores que os dos títulos de seção. Resultado operacional e tabela detalhada permanecem na Comparação, sem o fechamento redundante. O tema fica no rodapé da sidebar, também acessível na navegação mobile. O header inclui acesso visual à conta, com estado explícito de autenticação ainda indisponível, até a integração de backend.
 
@@ -468,7 +468,7 @@ O Ciladômetro consolida no card de cada opção a estratégia compacta, empates
 - ICE, HEV, PHEV e BEV;
 - cards com quilometragem anual, TCO de caixa mensal e valor de mercado;
 - cópia opcional da quilometragem atual ao cadastrar uma opção;
-- comparação do atual com uma ou duas opções simultaneamente;
+- comparação do atual com até quatro opções simultaneamente;
 - TCO de caixa e econômico em visão anual normalizada, apresentados por mês, por ano e por km;
 - detalhamento dos componentes do TCO;
 - economia ou custo adicional da troca;
@@ -479,9 +479,9 @@ O Ciladômetro consolida no card de cada opção a estratégia compacta, empates
 - `none`, `reducePayment` e `reduceTerm`;
 - comparação simultânea das três estratégias;
 - Laboratório com gráficos, tabela mensal/anual, filtros e CSV;
-- Ciladômetro de uma ou duas opções baseado no fluxo real do cronograma;
+- Ciladômetro de até quatro opções baseado no fluxo real do cronograma;
 - cronograma e evolução até a quitação;
-- persistência local;
+- persistência local para visitantes; conta confirmada por email com garagem remota e importação local explícita;
 - temas claro e escuro e layout responsivo.
 
 ### 15.2 Roadmap
@@ -490,22 +490,30 @@ O Ciladômetro consolida no card de cada opção a estratégia compacta, empates
 - `prepayTailInstallments` e sua reserva após definição contratual completa;
 - múltiplos planos recorrentes independentes;
 - múltiplos contratos ou cenários salvos para a mesma opção;
-- importação de dados;
+- importação de arquivos de dados externos;
 - histórico detalhado de abastecimentos e serviços;
 - TCO por período de posse;
 - divisão de uso do PHEV por dias, viagens ou energia medida;
 - curvas de depreciação e valor residual informado;
 - inflação e valor do dinheiro no tempo;
 - hospedagem gratuita e PWA;
-- backend e Supabase ou solução equivalente;
-- autenticação e sincronização entre dispositivos;
-- migração controlada da persistência local;
+- controle transacional de edição simultânea entre dispositivos;
 - rascunhos de formulários incompletos;
 - mensagens de validação associadas individualmente aos campos e lista consolidada de campos ausentes;
 - atalhos contextuais na Comparação para editar veículos, selecionar financiamento, retornar à garagem e abrir resumo ou tela de financiamento;
 - APIs externas para preços, FIPE ou índices, se futuramente aprovadas.
 
 Nenhum item de roadmap deve ser descrito como implementado sem código, testes e atualização do `APPLICATION_GUIDE.md`.
+
+### 15.2.1 Contas e garagem sincronizada — v1.3.0
+
+O usuário pode continuar sem conta com os dados no `localStorage` deste navegador ou criar uma conta com nome, email, senha e confirmação da senha no formulário. O cadastro por email exige confirmação do endereço antes do primeiro acesso à conta. O modo visitante mantém as quatro áreas e os cálculos atuais; deve informar que os dados locais podem desaparecer e não são sincronizados.
+
+Após autenticação, veículo atual, opções de troca, entradas dos financiamentos por opção e as seleções persistentes pertencem à conta e são carregados em seus dispositivos. Os cálculos de TCO, PRICE, cronogramas e Ciladômetro permanecem no navegador e não são gravados como resultados autoritativos. Tema e seleções adicionais temporárias continuam locais. O banco separa os registros por proprietário e impede que uma conta leia ou altere a garagem de outra.
+
+No primeiro acesso autenticado com dados locais existentes, o aplicativo oferece importação explícita para a conta. Não apaga a cópia local nem substitui dados remotos sem escolha do usuário e confirmação de sucesso. Ao sair da conta, dados remotos não permanecem expostos no modo visitante. Se houver garagem remota e garagem local, o aplicativo deve apresentar uma decisão compreensível antes de substituir dados. Antes de gravar, o cliente compara a garagem remota com a versão carregada; se ela mudou, interrompe a gravação e pede escolha explícita para substituí-la. Gravações iniciadas exatamente ao mesmo tempo ainda exigem controle transacional futuro. A implementação preserva o comportamento financeiro e funcional da v1.2.0.
+
+O envio de confirmação para usuários externos depende de um serviço de email configurado para produção no Supabase. A v1.3.0 mantém o envio padrão por decisão do usuário, de modo que cadastro e recuperação por email podem funcionar apenas para endereços autorizados na equipe do projeto. O cadastro público não deve ser anunciado como pronto até a configuração e o teste do SMTP próprio.
 
 ### 15.3 Fora de escopo previsível
 
@@ -587,3 +595,5 @@ Até essas definições serem aprovadas, funcionalidades dependentes não podem 
 | 1.0.4 | Base 1.1.0 (`63e48ad`); RC não publicado | 2026-10-12 | Refinamento dos seletores, da densidade vertical, do card único do Ciladômetro e da iconografia da estratégia, sem mudança funcional. |
 | 1.0.5 | Base 1.1.0 (`63e48ad`); RC não publicado | 2026-10-12 | Quarto cartão “+N” para cinco ou mais veículos, seletor unitário com indicador quadrado, ícones de parâmetros menores e retirada do fechamento repetido da Comparação. |
 | 1.0.6 | 1.2.0 (`v1.2.0`) | 2026-10-12 | Promoção da revisão visual a release oficial; seção 14.1 passa a definir o limite de quatro opções e a UX vigente. |
+| 1.0.7 | 1.2.0 (`v1.2.0`) | 2026-10-12 | Define a próxima etapa de contas confirmadas por email, modo visitante local, garagem por usuário, importação explícita e preservação dos cálculos; implementação ainda pendente. |
+| 1.0.8 | 1.3.0 | 2026-10-12 | Promove contas, garagem remota e importação à v1.3; explicita a detecção de alterações entre sessões e o limite de concorrência simultânea. |
