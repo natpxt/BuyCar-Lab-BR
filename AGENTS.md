@@ -35,7 +35,7 @@ Alterações financeiras devem ser pequenas e verificáveis. Preserve as funçõ
 
 ## Commits e pull requests
 
-Use mensagens imperativas, opcionalmente com Conventional Commits, como `feat: add vehicle comparison form`. Mantenha commits focados. Pull requests devem explicar a motivação, listar validações, vincular referências e incluir capturas para mudanças visuais. Destaque novas dependências, configurações e premissas financeiras.
+Use mensagens em português do Brasil com o formato `tipo: verbo no imperativo + objeto`, por exemplo `feat: adiciona comparação de veículos`, `fix: corrige seleção da garagem` ou `docs: atualiza guia de uso`. Use `release: publica BuyCar Lab vX.Y.Z` para o commit de versão e `BuyCar Lab - BR vX.Y.Z` como título da GitHub Release. Mantenha commits focados e preserve o histórico já publicado: não reescreva mensagens antigas, pois isso altera os SHAs e as tags. Pull requests devem explicar a motivação, listar validações, vincular referências e incluir capturas para mudanças visuais. Destaque novas dependências, configurações e premissas financeiras.
 
 ## Governança documental
 
