@@ -2,15 +2,23 @@
 
 > Documento: PRODUCT_SPEC
 >
-> Revisão do documento: 1.0.8
+> Revisão do documento: 1.0.11
 >
-> Aplicação descrita: 1.3.0 (base auditada 1.1.0 + adendos v1.2 e v1.3)
+> Aplicação descrita: 1.4.0 (base auditada 1.1.0 + adendos v1.2 a v1.4)
 >
 > Commit base auditado: 63e48ad
 >
 > Data da auditoria: 2026-10-11
 >
 > Status: Vigente
+
+## Adendo normativo — perfil e configurações da v1.4.0
+
+- A conta autenticada pode cadastrar e trocar uma foto de perfil opcional, editar o nome, solicitar alteração do email e trocar a senha. O email alterado depende do fluxo de confirmação do Supabase; o aplicativo não deve apresentá-lo como confirmado antes disso.
+- Durante o cadastro, a pessoa pode escolher uma foto. Como a confirmação de email precede a sessão autenticada, a foto fica temporariamente neste navegador e é enviada ao entrar na conta no mesmo navegador. Caso confirme em outro dispositivo, pode acrescentar a foto nas configurações.
+- O menu da conta abre uma tela própria de configurações. O visitante também pode abri-la para entender e apagar seus dados locais. A ação de limpar dados sai da sidebar e fica na seção de dados dessa tela, com confirmação explícita. Apagar a garagem não exclui a conta.
+- Fotos são privadas por conta, com limite de 2 MB e formatos JPG, PNG e WebP. Dados pessoais não entram em `vehicle_data`, TCO ou financiamento.
+- A tela de configurações mostra os dados em modo de consulta. **Alterar dados** abre o formulário de nome, email, senha e foto. A foto escolhida é apenas uma prévia até **Salvar alterações**; antes de enviar qualquer alteração, um diálogo pede confirmação. **Cancelar** descarta o rascunho. A seção de dados da garagem permanece acessível nessa tela.
 
 ## Governança e autoridade
 
@@ -597,3 +605,6 @@ Até essas definições serem aprovadas, funcionalidades dependentes não podem 
 | 1.0.6 | 1.2.0 (`v1.2.0`) | 2026-10-12 | Promoção da revisão visual a release oficial; seção 14.1 passa a definir o limite de quatro opções e a UX vigente. |
 | 1.0.7 | 1.2.0 (`v1.2.0`) | 2026-10-12 | Define a próxima etapa de contas confirmadas por email, modo visitante local, garagem por usuário, importação explícita e preservação dos cálculos; implementação ainda pendente. |
 | 1.0.8 | 1.3.0 | 2026-10-12 | Promove contas, garagem remota e importação à v1.3; explicita a detecção de alterações entre sessões e o limite de concorrência simultânea. |
+| 1.0.9 | 1.4.0 local | 2026-10-12 | Define foto de perfil, edição dos dados da conta e limpeza da garagem na tela de configurações. |
+| 1.0.10 | 1.4.0 local | 2026-10-12 | Exige modo de consulta, edição explícita e confirmação antes de salvar nome, email, senha ou foto. |
+| 1.0.11 | 1.4.0 | 2026-10-12 | Promove o fluxo de configurações à release oficial. |

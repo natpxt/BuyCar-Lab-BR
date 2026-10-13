@@ -1,18 +1,28 @@
 # BuyCar Lab - BR — Guia Funcional da Aplicação
 
-> Base auditada v1.1.0 com adendos as-built da v1.2.0 e v1.3.0
+> Base auditada v1.1.0 com adendos as-built da v1.2.0 à v1.4.0
 
 > Documento: APPLICATION_GUIDE
 >
-> Revisão do documento: 1.0.7
+> Revisão do documento: 1.0.10
 >
-> Aplicação descrita: 1.3.0 (base auditada 1.1.0 + adendos)
+> Aplicação descrita: 1.4.0 (base auditada 1.1.0 + adendos)
 >
 > Commit base auditado: 63e48ad
 >
 > Data da auditoria: 2026-10-11
 >
 > Status: Vigente
+
+## Adendo as-built — configurações da conta da v1.4.0
+
+A entrada **Configurações da conta** no menu do header abre uma tela separada. O usuário autenticado vê nome, email e foto, pode alterar cada dado e criar nova senha. A solicitação de alteração do email usa `auth.updateUser`; a confirmação e eventual exigência do endereço antigo dependem das configurações do Supabase. A foto é gravada no bucket privado `avatars`, no caminho `<user_id>/avatar`, e `profiles.avatar_path` registra sua presença. Somente o titular pode ler ou alterar esse arquivo; JPG, PNG e WebP têm limite de 2 MB. O fallback do avatar é um ícone.
+
+Na v1.4.0, a tela abre em modo de consulta. **Alterar dados** abre um formulário único; a foto escolhida mostra apenas uma prévia. **Salvar alterações** abre uma confirmação antes de enviar nome, foto, senha e solicitação de email. **Cancelar** descarta o rascunho. As operações no Supabase não são atômicas entre Auth, tabela e Storage: se uma etapa falhar, a tela informa quais alterações anteriores foram salvas e mantém a edição aberta para correção. A miniatura do header ocupa um quadrado fixo de 36 px com recorte proporcional.
+
+O cadastro aceita foto opcional. Antes da confirmação do email ela é guardada temporariamente em IndexedDB neste navegador; depois do primeiro login confirmado é enviada ao Storage e a cópia temporária é removida. Se a pessoa confirmar ou entrar por outro navegador, precisa selecionar a foto novamente nas configurações. A foto não é incluída no estado da garagem nem no `localStorage`.
+
+**Limpar dados** saiu da sidebar. Na tela de configurações, a ação pede confirmação e apaga a garagem da conta autenticada ou os dados locais do visitante, mantendo a semântica anterior; não apaga a conta. O visitante pode abrir a mesma tela para consultar o modo de armazenamento e limpar dados deste navegador. A migração `supabase/account_profile_v1_4.sql` acrescenta a coluna e as políticas do bucket. Esta funcionalidade integra a release v1.4.0.
 
 ## Governança e autoridade
 
@@ -913,3 +923,6 @@ Futuras alterações não devem quebrar estas regras confirmadas:
 | 1.0.5 | 1.2.0 (`v1.2.0`) | 2026-10-12 | Promoção do adendo as-built à release oficial, mantendo a auditoria histórica da base v1.1.0 separada. |
 | 1.0.6 | 1.2.0 publicada + working tree local de contas | 2026-10-12 | Registra Auth e garagem remota em desenvolvimento, modo visitante, importação e gaps de conflito, SMTP e teste autenticado; sem descrever o código local como release. |
 | 1.0.7 | 1.3.0 | 2026-10-12 | Promove Auth e garagem remota à release, incorpora teste autenticado relatado e verificação de alterações remotas antes da gravação; registra o limite de concorrência simultânea. |
+| 1.0.8 | 1.4.0 local | 2026-10-12 | Registra perfil, foto privada, edição da conta e limpeza da garagem nas configurações. |
+| 1.0.9 | 1.4.0 local | 2026-10-12 | Registra consulta antes da edição, prévia da foto, confirmação do salvamento e miniatura corrigida. |
+| 1.0.10 | 1.4.0 | 2026-10-12 | Promove o comportamento da conta à release oficial. |

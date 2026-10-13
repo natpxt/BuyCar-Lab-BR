@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type MouseEvent } from 'react'
 import { ChevronDown, UserRound } from 'lucide-react'
 import { useAuth } from '../application/AuthProvider'
 import { useAppState } from '../application/AppStateProvider'
 import { AppIcon } from './AppIcon'
+import { stageSignupPhoto, validateProfilePhoto } from '../application/profilePhoto'
 
 type AccountView = 'login' | 'signup' | 'reset'
 
@@ -15,7 +16,7 @@ function authMessage(error: unknown): string {
   return message
 }
 
-export function AccountMenu() {
+export function AccountMenu({ onSettings }: { onSettings(): void }) {
   const auth = useAuth()
   const { storageMode, flushPending, hasLocalGarage, syncing, importLocalGarage } = useAppState()
   const [view, setView] = useState<AccountView>('login')
@@ -23,6 +24,8 @@ export function AccountMenu() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
+  const [signupPhoto, setSignupPhoto] = useState<File | null>(null)
+  const [signupPreview, setSignupPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -42,7 +45,14 @@ export function AccountMenu() {
         setNotice('Senha atualizada. Sua conta está pronta para uso.')
       } else if (view === 'signup') {
         await auth.signUp(name, email, password)
-        setNotice('Cadastro recebido. Abra o link enviado ao seu email para confirmar a conta.')
+        let photoStaged = true
+        if (signupPhoto) {
+          try { await stageSignupPhoto(email, signupPhoto) }
+          catch { photoStaged = false }
+        }
+        setNotice(photoStaged
+          ? 'Cadastro recebido. Abra o link enviado ao seu email para confirmar a conta.'
+          : 'Cadastro recebido. Confirme o email; depois, adicione a foto nas configurações da conta.')
       } else if (view === 'reset') {
         await auth.resetPassword(email)
         setNotice('Se houver uma conta com esse email, enviaremos um link de recuperação.')
@@ -87,14 +97,30 @@ export function AccountMenu() {
     }
   }
 
-  const accountName = typeof auth.user?.user_metadata.display_name === 'string'
-    ? auth.user.user_metadata.display_name
-    : auth.user?.email?.split('@')[0]
+  const accountName = auth.displayName || auth.user?.email?.split('@')[0]
+
+  function openSettings(event: MouseEvent<HTMLButtonElement>) {
+    event.currentTarget.closest('details')?.removeAttribute('open')
+    onSettings()
+  }
+
+  function choosePhoto(file: File | undefined) {
+    if (signupPreview) URL.revokeObjectURL(signupPreview)
+    setSignupPhoto(null)
+    setSignupPreview(null)
+    if (!file) return
+    try {
+      validateProfilePhoto(file)
+      setError('')
+      setSignupPhoto(file)
+      setSignupPreview(URL.createObjectURL(file))
+    } catch (caught) { setError(authMessage(caught)) }
+  }
 
   return (
     <details className="account-menu">
       <summary aria-label="Abrir área da conta">
-        <span className="account-avatar" aria-hidden="true"><AppIcon icon={UserRound} /></span>
+        <span className="account-avatar" aria-hidden="true">{auth.avatarUrl ? <img src={auth.avatarUrl} alt="" /> : <AppIcon icon={UserRound} />}</span>
         <span><strong>{auth.user ? accountName : 'Entrar'}</strong><small>{auth.user ? 'Sua conta' : 'Continuar sem conta'}</small></span>
         <AppIcon icon={ChevronDown} size={16} />
       </summary>
@@ -106,6 +132,7 @@ export function AccountMenu() {
             <small>{storageMode === 'cloud'
               ? syncing ? 'Sincronizando garagem…' : 'Garagem vinculada à sua conta.'
               : 'Carregando garagem…'}</small>
+            <button type="button" className="account-secondary-action" onClick={openSettings}>Configurações da conta</button>
             {hasLocalGarage && <button type="button" className="account-secondary-action" disabled={busy} onClick={() => void importGarage()}>Importar garagem deste navegador</button>}
             {error && <p className="account-message account-message-error" role="alert">{error}</p>}
             {notice && <p className="account-message" role="status">{notice}</p>}
@@ -117,14 +144,21 @@ export function AccountMenu() {
           <>
             <strong>Continuar sem conta</strong>
             <p>Seus dados ficam neste navegador. A conexão com contas ainda não foi configurada neste ambiente.</p>
+            <button type="button" className="account-secondary-action" onClick={openSettings}>Dados deste navegador</button>
           </>
         ) : (
           <>
             <strong>{auth.passwordRecovery ? 'Criar nova senha' : view === 'signup' ? 'Criar conta' : view === 'reset' ? 'Recuperar senha' : 'Entrar na conta'}</strong>
             <p>Você pode continuar sem conta. Nesse caso, a garagem fica só neste navegador e pode ser perdida ao limpar os dados do site.</p>
+            <button type="button" className="account-secondary-action" onClick={openSettings}>Dados deste navegador</button>
             <form className="account-form" onSubmit={(event) => void submit(event)}>
               {view === 'signup' && !auth.passwordRecovery && (
-                <label>Nome<input required autoComplete="name" maxLength={120} value={name} onChange={(event) => setName(event.target.value)} /></label>
+                <>
+                  <label>Nome<input required autoComplete="name" maxLength={120} value={name} onChange={(event) => setName(event.target.value)} /></label>
+                  <label>Foto de perfil (opcional)<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => choosePhoto(event.target.files?.[0])} /></label>
+                  {signupPreview && <div className="signup-photo-preview"><img src={signupPreview} alt="Prévia da foto de perfil" /><button type="button" onClick={() => choosePhoto(undefined)}>Remover foto</button></div>}
+                  <small>JPG, PNG ou WebP até 2 MB. A foto será salva após confirmar o email e entrar neste navegador.</small>
+                </>
               )}
               {!auth.passwordRecovery && (
                 <label>Email<input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>

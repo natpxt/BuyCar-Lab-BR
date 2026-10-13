@@ -1,6 +1,6 @@
 # BuyCar Lab - BR
 
-**Versão oficial: v1.3.0.** [Abrir o aplicativo](https://buy-car-lab-br.vercel.app/).
+**Versão oficial: v1.4.0.** [Abrir o aplicativo](https://buy-car-lab-br.vercel.app/).
 
 Aplicativo para comparar o custo total de propriedade de veículos e analisar financiamentos PRICE. O uso principal é pelo site, sem instalação. Você pode criar uma conta para guardar e sincronizar sua garagem ou continuar sem conta, com dados apenas neste navegador.
 
@@ -13,7 +13,7 @@ Aplicativo para comparar o custo total de propriedade de veículos e analisar fi
 - Laboratório de financiamento PRICE, aportes, cobranças e três estratégias de amortização.
 - Ciladômetro para comparar o impacto financeiro da troca.
 - Gráficos, tabela de amortização, filtros e exportação CSV.
-- Modos claro e escuro, cadastro de conta e uso sem login.
+- Modos claro e escuro, cadastro de conta com foto opcional e uso sem login.
 
 ## Como usar
 
@@ -26,6 +26,8 @@ Nesta etapa, a confirmação por email está limitada aos endereços autorizados
 Você também pode usar todas as áreas sem fazer login. Nesse caso, veículos e financiamentos ficam no armazenamento local do navegador e podem desaparecer se os dados do site forem apagados. Eles não aparecem automaticamente em outro navegador ou dispositivo.
 
 Se você já usava o aplicativo sem conta **nesse mesmo navegador e endereço**, o primeiro login oferece importar a garagem local. A importação é opcional; a cópia local é preservada. Se a conta já tiver uma garagem, o aplicativo pede confirmação antes de substituí-la. A opção de importar também fica no menu da conta.
+
+No menu da conta, **Configurações da conta** mostra nome, email e foto. Clique em **Alterar dados** para editar o perfil, trocar a foto ou criar nova senha. A foto escolhida aparece como prévia; as mudanças só são enviadas após **Salvar alterações** e a confirmação no diálogo. A alteração de email pode exigir confirmação por mensagem. A foto escolhida no cadastro é enviada após confirmar o email e entrar no mesmo navegador; em outro dispositivo, você pode adicioná-la nas configurações.
 
 ### 01 — Garagem
 
@@ -50,7 +52,7 @@ Selecione até quatro opções para comparar economia operacional e desembolso f
 - Ao sair da conta, a garagem da conta deixa de aparecer. A garagem local do visitante, se houver, continua separada.
 - Alterações pendentes exibem o estado de sincronização. Evite fechar a página antes de concluir a gravação.
 - Se outra sessão tiver mudado a garagem, a gravação é interrompida e o aplicativo pede uma decisão antes de substituir os dados remotos. Edições iniciadas exatamente ao mesmo tempo ainda podem disputar a gravação.
-- **Limpar todos os dados** remove a garagem do modo em uso: da conta quando você está conectado, ou deste navegador no modo visitante.
+- Em **Configurações da conta → Dados da garagem**, **Limpar dados** remove a garagem do modo em uso: da conta quando você está conectado, ou deste navegador no modo visitante. A conta não é excluída.
 
 ## Premissas e limitações
 

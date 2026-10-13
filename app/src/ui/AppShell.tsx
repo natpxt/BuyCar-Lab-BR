@@ -10,7 +10,7 @@ import {
   type ThemeMode,
 } from '../application/themePreference'
 
-export type AppArea = 'vehicles' | 'comparison' | 'financing' | 'decision'
+export type AppArea = 'vehicles' | 'comparison' | 'financing' | 'decision' | 'account'
 
 interface AppShellProps {
   readonly activeArea: AppArea
@@ -18,7 +18,7 @@ interface AppShellProps {
   onNavigate(area: AppArea): void
 }
 
-const areas: readonly { id: AppArea; label: string; description: string }[] = [
+const areas: readonly { id: Exclude<AppArea, 'account'>; label: string; description: string }[] = [
   { id: 'vehicles', label: 'Garagem', description: 'Seus veículos e custos' },
   { id: 'comparison', label: 'Comparação', description: 'TCO lado a lado' },
   { id: 'financing', label: 'Financiamento', description: 'Contrato e amortizações' },
@@ -30,7 +30,7 @@ function prefersDarkTheme(): boolean {
 }
 
 export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
-  const { persistenceError, clearAllData, storageMode, retrySave } = useAppState()
+  const { persistenceError, storageMode, retrySave } = useAppState()
   const [theme, setTheme] = useState<ThemeMode>(() => (
     loadThemePreference(window.localStorage, prefersDarkTheme())
   ))
@@ -71,24 +71,13 @@ export function AppShell({ activeArea, children, onNavigate }: AppShellProps) {
             <AppIcon icon={Moon} />
           </button>
           <span>Versão {__APP_VERSION__}</span>
-          <button
-            className="clear-data"
-            onClick={() => {
-              const target = storageMode === 'cloud' ? 'na sua conta' : 'neste navegador'
-              if (window.confirm(`Apagar todos os veículos e simulações salvos ${target}? Esta ação não pode ser desfeita.`)) {
-                clearAllData()
-              }
-            }}
-          >
-            Limpar todos os dados
-          </button>
         </footer>
       </aside>
 
       <div className="workspace">
         <header className="workspace-topbar">
           <div className="topbar-actions">
-            <AccountMenu />
+            <AccountMenu onSettings={() => onNavigate('account')} />
           </div>
         </header>
 

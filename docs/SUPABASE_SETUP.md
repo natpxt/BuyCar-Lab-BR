@@ -1,6 +1,10 @@
 # Configuração inicial do Supabase — BuyCar Lab - BR
 
-> Estrutura criada no projeto em 2026-10-12 e usada pela aplicação v1.3.0. Não execute o SQL inicial novamente neste projeto.
+> Estrutura criada no projeto em 2026-10-12 e ampliada para a aplicação v1.4.0. Não execute o SQL inicial novamente neste projeto.
+
+## Extensão para v1.4.0
+
+A migração [`../supabase/account_profile_v1_4.sql`](../supabase/account_profile_v1_4.sql) foi aplicada ao projeto principal via Supabase. Ela acrescenta `profiles.avatar_path`, cria o bucket privado `avatars` (2 MB; JPG, PNG e WebP) e quatro políticas de Storage limitadas ao caminho `<user_id>/avatar`. A foto temporária do cadastro fica no IndexedDB até o primeiro login confirmado no mesmo navegador. Email e senha continuam no Supabase Auth; a alteração de email segue o fluxo de confirmação configurado no projeto. Não execute a migração novamente.
 
 ## Projeto correto
 
@@ -62,7 +66,7 @@ O SQL Editor não registra essa execução inicial como uma migração do Supaba
 
 - **Authentication → Providers → Email:** manter a confirmação de email ativada.
 - **Authentication → URL Configuration:** configurar a URL de produção e os redirecionamentos de desenvolvimento antes de testar os links.
-- **Authentication → SMTP Settings:** a v1.3.0 mantém temporariamente o envio padrão por decisão do usuário. Ele restringe destinatários à equipe do projeto e não é adequado para cadastro público. Configurar e testar SMTP próprio antes de anunciar contas para todos.
+- **Authentication → SMTP Settings:** a v1.4.0 mantém temporariamente o envio padrão por decisão do usuário. Ele restringe destinatários à equipe do projeto e não é adequado para cadastro público. Configurar e testar SMTP próprio antes de anunciar contas para todos.
 - **Vercel:** manter apenas a URL pública do projeto e a chave *publishable* como variáveis de ambiente. Nunca usar `service_role` ou chave secreta no frontend.
 
 Nenhuma dessas configurações posteriores é feita pelo SQL inicial.
