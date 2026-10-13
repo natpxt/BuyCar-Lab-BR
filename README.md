@@ -60,6 +60,8 @@ Os resultados dependem das entradas fornecidas e não constituem recomendação 
 
 Dados salvos em `localhost` pertencem a outra origem e não aparecem automaticamente no site publicado. A entrega de emails de confirmação e recuperação depende da configuração de envio do projeto Supabase.
 
+Para entender o produto e contribuir, consulte [a especificação do produto](docs/PRODUCT_SPEC.md), [o modelo financeiro](docs/FINANCIAL_MODEL.md), [o guia funcional](docs/APPLICATION_GUIDE.md), [a identidade visual](docs/VISUAL_IDENTITY.md) e [a configuração do Supabase](docs/SUPABASE_SETUP.md).
+
 O GitHub está ligado à Vercel: um push para `main` inicia o build e, se ele passar, atualiza o site. Um commit apenas no computador não altera a produção.
 
 ## Instalação local (opcional)
