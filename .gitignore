@@ -5,3 +5,15 @@ dist-ssr/
 *.log
 .DS_Store
 Thumbs.db
+
+# Materiais internos mantidos apenas no ambiente de desenvolvimento
+.codex/
+AGENTS.md
+reference/
+supabase/
+docs/APPLICATION_GUIDE.md
+docs/FINANCIAL_MODEL.md
+docs/PRODUCT_SPEC.md
+docs/SUPABASE_SETUP.md
+docs/UX_REDESIGN_V1_2.md
+docs/VISUAL_IDENTITY.md

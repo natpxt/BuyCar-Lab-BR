@@ -58,7 +58,7 @@ Selecione até quatro opções para comparar economia operacional e desembolso f
 
 Os resultados dependem das entradas fornecidas e não constituem recomendação financeira. TCO de caixa, TCO econômico e fluxo de caixa do financiamento são conceitos separados. O principal amortizado reduz a dívida, mas não é custo econômico isolado.
 
-Dados salvos em `localhost` pertencem a outra origem e não aparecem automaticamente no site publicado. A entrega de emails de confirmação e recuperação depende da configuração de envio do projeto Supabase. Consulte [a especificação do produto](docs/PRODUCT_SPEC.md), [o modelo financeiro](docs/FINANCIAL_MODEL.md), [o guia funcional](docs/APPLICATION_GUIDE.md) e [a configuração do Supabase](docs/SUPABASE_SETUP.md).
+Dados salvos em `localhost` pertencem a outra origem e não aparecem automaticamente no site publicado. A entrega de emails de confirmação e recuperação depende da configuração de envio do projeto Supabase.
 
 O GitHub está ligado à Vercel: um push para `main` inicia o build e, se ele passar, atualiza o site. Um commit apenas no computador não altera a produção.
 
